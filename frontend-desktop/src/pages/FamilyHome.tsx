@@ -118,6 +118,9 @@ export function StudentHome() {
   const t = d.today_attendance;
   const threshold = Number(d.term.threshold);
   const below = d.attendance.percentage < threshold;
+  const attendanceColor = !below ? "var(--pos)"
+    : d.attendance.percentage >= threshold - 10 ? "var(--cau-ink)"
+      : "var(--attendance-orange)";
   const next = d.today_schedule.find((s) => s.starts_at > new Date().toTimeString().slice(0, 5)) ?? d.today_schedule[0];
 
   return (
@@ -135,7 +138,7 @@ export function StudentHome() {
       </div>
 
       <div className="grid4">
-        <Stat label="Attendance" value={`${d.attendance.percentage.toFixed(1)}%`} tone={below ? "cau" : "pos"} note={<>{d.attendance.present} of {d.attendance.total} days</>} />
+        <Stat label="Attendance" value={<span style={{ color: attendanceColor }}>{d.attendance.percentage.toFixed(1)}%</span>} tone={below ? "cau" : "pos"} note={<>{d.attendance.present} of {d.attendance.total} days</>} />
         <Stat label="Periods today" value={d.today_schedule.length} note={next ? `next at ${next.starts_at}` : "none"} />
         <Stat label="Active leave" value={d.active_leave_count} tone={d.active_leave_count ? "cau" : "pos"} note={<Link to="/leave">Leave status</Link>} />
         <Stat label="Unread" value={d.unread_notifications} tone={d.unread_notifications ? "inf" : "pos"} note={<Link to="/notifications">Notifications</Link>} />
