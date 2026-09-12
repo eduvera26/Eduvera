@@ -322,7 +322,14 @@
 .metric-card__header svg { color: var(--parent-primary); }
 .metric-card__value { display: block; margin-top: 12px; font-size: clamp(21px, 6.8vw, 28px); line-height: 1.1; letter-spacing: -0.045em; }
 .metric-card__value.is-positive { color: var(--parent-positive-dark); font-size: clamp(17px, 5vw, 20px); letter-spacing: -0.025em; }
-.metric-card__detail { gap: 6px; margin-top: 7px; color: var(--parent-muted); font-size: 11px; line-height: 14px; white-space: nowrap; }
+.metric-card__detail { gap: 6px; margin-top: 7px; color: var(--parent-muted); font-size: 11px; line-height: 14px; flex-wrap: wrap; }
+.metric-card__insight { display: flex; flex-direction: column; align-items: flex-start; gap: 5px; margin-top: 8px; }
+.metric-card__rank { color: var(--parent-muted); font-size: 11px; line-height: 15px; font-weight: 600; }
+.metric-trend { display: inline-flex; align-items: center; gap: 3px; font-size: 11px; line-height: 15px; font-weight: 800; }
+.metric-trend small { margin-left: 3px; color: var(--parent-muted); font-size: 10px; font-weight: 500; }
+.metric-trend--positive { color: var(--parent-positive-dark); }
+.metric-trend--negative { color: var(--parent-danger); }
+.metric-trend--neutral { color: var(--parent-muted); }
 .mini-pill { padding: 2px 7px; border-radius: 5px; font-weight: 700; }
 .mini-pill--success { color: var(--parent-positive-dark); background: #dcf7f1; }
 .blue-text { color: var(--parent-primary-bright); }

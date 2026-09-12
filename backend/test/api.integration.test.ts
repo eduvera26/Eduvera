@@ -135,6 +135,16 @@ describe("OmniSchool API", () => {
     expect((await browser.login("pooja.parent")).status).toBe(200);
     const home = await json(await browser.request("/api/v1/screens/parent/home/"));
     expect(home.student.user.display_name).toBe("Aarav Sharma");
+    expect(home.semester_metrics).toMatchObject({
+      attendance_rank: expect.any(Number),
+      attendance_cohort_size: expect.any(Number),
+      homework_due: expect.any(Number),
+      homework_total: expect.any(Number),
+      homework_recent: expect.any(Number),
+      homework_previous: expect.any(Number),
+    });
+    expect(home.semester_metrics.homework_total).toBeGreaterThanOrEqual(home.semester_metrics.homework_due);
+    expect(home.semester_metrics.attendance_trend_percent === null || Number.isFinite(home.semester_metrics.attendance_trend_percent)).toBe(true);
     expect(home.contacts[0]).toMatchObject({ name: "Ms. Kavita Mehta", email: "kavita.mehta@cambridge.example.test" });
     const parentLeave = await json(await browser.request(`/api/v1/screens/parent/leave/${home.action_required.id}/`));
     expect(parentLeave.constraints).toMatchObject({

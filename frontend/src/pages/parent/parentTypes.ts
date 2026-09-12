@@ -49,10 +49,16 @@ export interface ParentHomeData {
   metrics: {
     attendance: string;
     attendanceStatus: string;
+    attendanceTrend?: number | null;
+    attendanceRank?: number | null;
+    attendanceCohortSize?: number | null;
     threshold: string;
     periodsToday: number;
     dismissal: string;
     homeworkTasks: number;
+    homeworkTotal?: number;
+    homeworkRecent?: number;
+    homeworkPrevious?: number;
     homeworkDetail: string;
     duesStatus: string;
     duesDetail: string;

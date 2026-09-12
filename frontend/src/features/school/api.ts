@@ -150,8 +150,14 @@ export interface ParentHomeResponse {
   semester_metrics: {
     attendance_percentage: number;
     attendance_threshold?: number;
+    attendance_trend_percent?: number | null;
+    attendance_rank?: number | null;
+    attendance_cohort_size?: number | null;
     periods_today: number;
     homework_due: number;
+    homework_total?: number;
+    homework_recent?: number;
+    homework_previous?: number;
     dues_status: string;
     dues_status_scope?: string;
   };

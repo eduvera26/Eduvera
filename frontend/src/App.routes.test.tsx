@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Link, MemoryRouter } from "react-router-dom";
 import { App } from "./App";
@@ -102,6 +102,41 @@ describe("implemented application routes", () => {
     await user.click(screen.getByRole("button", { name: "Close digital student ID" }));
     await user.click(screen.getByRole("link", { name: "Attendance" }));
     expect(await screen.findByText("Overall Aggregate")).toBeVisible();
+  });
+
+  it("shows live attendance rank and trends alongside pending and historical homework", async () => {
+    render(<MemoryRouter initialEntries={["/parent/home"]}><App /></MemoryRouter>);
+    const attendance = within((await screen.findByText("Attendance", { selector: ".metric-card__header span" })).closest("article")!);
+    expect(attendance.getByText("+5%")).toBeVisible();
+    expect(attendance.getByText("Class rank #4 of 32")).toBeVisible();
+    const homework = within(screen.getByText("Homework", { selector: ".metric-card__header span" }).closest("article")!);
+    expect(homework.getByText("1 Pending")).toBeVisible();
+    expect(homework.getByText("12 assigned this term")).toBeVisible();
+    expect(homework.getByText("-25%")).toBeVisible();
+  });
+
+  it("handles declining attendance and new homework without inventing a rank or percentage baseline", async () => {
+    const original = apiFetchMock.getMockImplementation() as (path: string) => Promise<unknown>;
+    apiFetchMock.mockImplementation((path: string) => {
+      if (path.startsWith("/api/v1/screens/parent/home/")) {
+        const response = schoolApiFixture(path) as { semester_metrics: Record<string, unknown> };
+        return Promise.resolve({ ...response, semester_metrics: {
+          ...response.semester_metrics,
+          attendance_trend_percent: -6,
+          attendance_rank: null,
+          attendance_cohort_size: null,
+          homework_recent: 3,
+          homework_previous: 0,
+        } });
+      }
+      return original(path);
+    });
+    render(<MemoryRouter initialEntries={["/parent/home"]}><App /></MemoryRouter>);
+    const attendance = within((await screen.findByText("Attendance", { selector: ".metric-card__header span" })).closest("article")!);
+    expect(attendance.getByText("-6%")).toBeVisible();
+    expect(attendance.getByText("Class rank not published")).toBeVisible();
+    const homework = within(screen.getByText("Homework", { selector: ".metric-card__header span" }).closest("article")!);
+    expect(homework.getByText("+3 new")).toBeVisible();
   });
 
   it("switches the parent ID card across all accessible children and marks off-campus red", async () => {

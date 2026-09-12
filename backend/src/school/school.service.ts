@@ -732,7 +732,7 @@ export class SchoolService {
   async parentHome(user: AuthUser, studentId?: string) {
     const student = await this.studentForUser(user, studentId);
     const [, enrollment] = await Promise.all([this.requireRole(user, student, "guardian"), this.enrollment(student.id)]);
-    const [summary, campus, schedule, diary, contacts, siblings, unread, pending, homework] = await Promise.all([
+    const [summary, campus, schedule, diary, contacts, siblings, unread, pending, homework, recentAttendance, ranking] = await Promise.all([
       this.attendanceSummary(student.id, enrollment),
       this.latestGate(student.id, today()),
       this.timetable(enrollment, isoWeekday(today())),
@@ -741,10 +741,28 @@ export class SchoolService {
       this.accessibleStudentDtos(user),
       this.db.selectFrom("notifications").select(sql<string>`count(*)::text`.as("count")).where("recipient_id", "=", user.id).where("read_at", "is", null).executeTakeFirst(),
       this.db.selectFrom("leave_requests").select("id").where("student_id", "=", student.id).where("status", "=", "pending_guardian").orderBy("created_at", "desc").executeTakeFirst(),
-      this.db.selectFrom("diary_items").select(sql<string>`count(*)::text`.as("count"))
+      this.db.selectFrom("diary_items").select([
+        sql<string>`count(*)::text`.as("total"),
+        sql<string>`count(*) FILTER (WHERE due_at >= now())::text`.as("due"),
+        sql<string>`count(*) FILTER (WHERE published_at >= now() - interval '30 days')::text`.as("recent"),
+        sql<string>`count(*) FILTER (WHERE published_at >= now() - interval '60 days' AND published_at < now() - interval '30 days')::text`.as("previous"),
+      ])
         .where("class_section_id", "=", enrollment.class_section_id).where("term_id", "=", enrollment.term_id)
-        .where("item_type", "=", "homework").where("due_at", ">=", new Date()).executeTakeFirst(),
+        .where("item_type", "=", "homework").where("published_at", "<=", new Date()).executeTakeFirst(),
+      this.db.selectFrom("attendance_records").select("status")
+        .where("student_id", "=", student.id).where("date", ">=", enrollment.starts_on)
+        .where("date", "<=", enrollment.ends_on).where("date", "<=", today())
+        .orderBy("date", "desc").limit(20).execute(),
+      this.classAttendanceRanking(student.id, enrollment),
     ]);
+    const sampleSize = Math.min(10, Math.floor(recentAttendance.length / 2));
+    const attendanceScore = (statuses: typeof recentAttendance) => statuses.reduce((score, item) =>
+      score + (item.status === "present" || item.status === "late" ? 1 : item.status === "half_day" ? 0.5 : 0), 0) * 100 / statuses.length;
+    const attendanceTrend = sampleSize >= 3 ? Math.round((
+      attendanceScore(recentAttendance.slice(0, sampleSize)) - attendanceScore(recentAttendance.slice(sampleSize, sampleSize * 2))
+    ) * 10) / 10 : null;
+    const recentHomework = Number(homework?.recent ?? 0);
+    const previousHomework = Number(homework?.previous ?? 0);
     const actionRequired = pending ? await this.leaveDto(pending.id) : null;
     return {
       student: await this.studentDto(student, enrollment), siblings: siblings.filter((item) => item.id !== student.id),
@@ -754,8 +772,14 @@ export class SchoolService {
       semester_metrics: {
         attendance_percentage: summary.percentage,
         attendance_threshold: Number(enrollment.attendance_threshold),
+        attendance_trend_percent: attendanceTrend,
+        attendance_rank: ranking.published ? ranking.current_rank : null,
+        attendance_cohort_size: ranking.published ? ranking.cohort_size : null,
         periods_today: schedule.length,
-        homework_due: Number(homework?.count ?? 0),
+        homework_due: Number(homework?.due ?? 0),
+        homework_total: Number(homework?.total ?? 0),
+        homework_recent: recentHomework,
+        homework_previous: previousHomework,
         dues_status: "All Cleared",
         dues_status_scope: "display_only_demo",
       },
