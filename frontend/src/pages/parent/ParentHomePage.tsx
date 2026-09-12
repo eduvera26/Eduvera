@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import {
@@ -25,8 +25,11 @@ import "./parent-pages.css";
 export interface ParentHomePageProps {
   data?: ParentHomeData;
   onSelectChild?: (childId: string) => ParentPageAction;
+  onPrepareChild?: (childId: string) => Promise<ParentHomeData>;
   onContactTeacher?: () => ParentPageAction;
 }
+type CardDirection = "left" | "right";
+type CardTransition = { phase: "preparing" | "animating" | "completed"; targetId: string; direction: CardDirection; incoming?: ParentHomeData };
 function MetricCard({
   label,
   icon,
@@ -55,24 +58,62 @@ function MetricCard({
 export function ParentHomePage({
   data = fallbackHomeData,
   onSelectChild,
+  onPrepareChild,
   onContactTeacher,
 }: ParentHomePageProps) {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const auth = useOptionalAuth();
-  const [isSwitching, setIsSwitching] = useState(false);
+  const [transition, setTransition] = useState<CardTransition | null>(null);
+  const [switchError, setSwitchError] = useState("");
+  const switchTimer = useRef<number | null>(null);
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+      if (switchTimer.current !== null) window.clearTimeout(switchTimer.current);
+    };
+  }, []);
+  const activeTransition = transition?.phase === "completed" && transition.targetId === data.child.id ? null : transition;
   const schoolName = auth?.memberships.find((membership) => membership.role === "guardian")?.school_name ?? "Cambridge International School";
   const childrenQuery = useQuery({ queryKey: ["school", "accessible-students"], queryFn: getAccessibleStudents, staleTime: 60_000 });
   const children = childrenQuery.data?.results.map((student) => ({ id: student.id, name: student.user.display_name })) ?? [];
-  const currentChildIndex = children.findIndex((student) => student.id === data.child.id);
+  const visibleChildId = activeTransition?.phase === "completed" ? activeTransition.targetId : data.child.id;
+  const currentChildIndex = children.findIndex((student) => student.id === visibleChildId);
   const nextChild = children.length > 1
     ? children[(currentChildIndex + 1) % children.length]
     : data.sibling;
+  const previousChild = children.length > 1
+    ? children[(currentChildIndex - 1 + children.length) % children.length]
+    : data.sibling;
   const childCount = Math.max(children.length, data.sibling ? 2 : 1);
-  const switchToChild = (childId: string) => {
-    if (!onSelectChild || isSwitching || childId === data.child.id) return;
-    setIsSwitching(true);
-    window.setTimeout(() => { void onSelectChild(childId); }, 320);
+  const switchToChild = async (childId: string, preferredDirection?: CardDirection) => {
+    if (!onSelectChild || activeTransition || childId === data.child.id) return;
+    const direction = preferredDirection ?? (previousChild?.id === childId ? "right" : "left");
+    setSwitchError("");
+    setTransition({ phase: "preparing", targetId: childId, direction });
+    let incoming: ParentHomeData | undefined;
+    try {
+      incoming = await onPrepareChild?.(childId);
+    } catch {
+      if (!mounted.current) return;
+      setTransition(null);
+      setSwitchError("Could not load this student's card. Please try again.");
+      return;
+    }
+    if (!mounted.current) return;
+    setTransition({ phase: "animating", targetId: childId, direction, incoming });
+    const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
+    switchTimer.current = window.setTimeout(() => {
+      setTransition({ phase: "completed", targetId: childId, direction, incoming });
+      void onSelectChild(childId);
+      switchTimer.current = null;
+    }, reducedMotion ? 0 : 620);
+  };
+  const swipeCard = (direction: CardDirection) => {
+    const target = direction === "right" ? previousChild : nextChild;
+    if (target) void switchToChild(target.id, direction);
   };
   const selectedStudentId = searchParams.get("student_id");
   const parentPath = (path: string) =>
@@ -95,14 +136,20 @@ export function ParentHomePage({
       pageLabel="Home"
       child={data.child}
       presenceStatus={data.presence.status === "In School" ? "in" : "away"}
-      onSelectChild={switchToChild}
+      onSelectChild={(childId) => { void switchToChild(childId); }}
       childOptions={data.sibling ? [data.child, data.sibling] : [data.child]}
     >
       <div className="parent-stack home-page">
-        <div className={`parent-id-stack${childCount > 1 ? " has-multiple" : ""}${childCount > 2 ? " has-three-or-more" : ""}${isSwitching ? " is-switching" : ""}`}>
-          <StudentIdentityCard key={data.child.id} identity={data.idCard} schoolName={schoolName} primaryHeading={false} showSwitchButton={false} switchChild={nextChild && onSelectChild ? { name: nextChild.name.split(" ")[0] ?? nextChild.name, onSelect: () => switchToChild(nextChild.id) } : undefined} />
+        <div className={`parent-id-stack${childCount > 1 ? " has-multiple" : ""}${childCount > 2 ? " has-three-or-more" : ""}${activeTransition ? ` is-${activeTransition.phase} direction-${activeTransition.direction}` : ""}`} aria-busy={activeTransition?.phase === "preparing"}>
+          {activeTransition?.phase === "animating" && activeTransition.incoming ? <div className="parent-id-stack__incoming" aria-hidden="true" inert>
+            <StudentIdentityCard identity={activeTransition.incoming.idCard} schoolName={schoolName} primaryHeading={false} showSwitchButton={false} />
+          </div> : null}
+          <div className="parent-id-stack__active">
+            <StudentIdentityCard identity={activeTransition?.phase === "completed" ? activeTransition.incoming?.idCard ?? data.idCard : data.idCard} schoolName={schoolName} primaryHeading={false} showSwitchButton={false} switchChild={nextChild && onSelectChild ? { name: nextChild.name.split(" ")[0] ?? nextChild.name, onSelect: () => { void switchToChild(nextChild.id, "left"); }, onSwipe: swipeCard } : undefined} />
+          </div>
         </div>
-        {nextChild && onSelectChild ? <button className="parent-id-switch" type="button" disabled={isSwitching} onClick={() => switchToChild(nextChild.id)}>Switch to {nextChild.name.split(" ")[0] ?? nextChild.name}</button> : null}
+        {nextChild && onSelectChild ? <button className="parent-id-switch" type="button" disabled={Boolean(activeTransition)} onClick={() => { void switchToChild(nextChild.id, "left"); }}>{activeTransition?.phase === "preparing" ? "Getting next card…" : `Switch to ${nextChild.name.split(" ")[0] ?? nextChild.name}`}</button> : null}
+        {switchError ? <p className="parent-id-stack__error" role="alert">{switchError}</p> : null}
 
         <section className="home-action-section" aria-labelledby="action-required-heading">
           <div className="section-eyebrow-row">

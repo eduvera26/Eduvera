@@ -59,9 +59,11 @@ function contactAction(contact?: { name: string; email?: string | null; phone?: 
 
 export function ParentHomeRoute() {
   const { studentId, selectStudent } = useSelectedStudent();
+  const queryClient = useQueryClient();
   const query = useQuery({
     queryKey: ["school", "parent", "home", studentId ?? "default"],
     queryFn: () => getParentHome(studentId),
+    staleTime: 30_000,
   });
   if (query.isPending) return <ScreenLoading />;
   if (query.isError || !query.data) return <LiveRouteError error={query.error} onRetry={query.refetch} />;
@@ -70,9 +72,13 @@ export function ParentHomeRoute() {
   const teacher = response.contacts.find((contact) => /teacher|advisor|homeroom/i.test(contact.label));
   return (
     <ParentHomePage
-      key={response.student.id}
       data={data}
       onSelectChild={selectStudent}
+      onPrepareChild={(childId) => queryClient.fetchQuery({
+        queryKey: ["school", "parent", "home", childId],
+        queryFn: () => getParentHome(childId),
+        staleTime: 30_000,
+      }).then(adaptParentHome)}
       onContactTeacher={contactAction(teacher)}
     />
   );

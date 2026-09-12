@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { App } from "./App";
@@ -126,12 +126,26 @@ describe("implemented application routes", () => {
     const switchToAnanya = await screen.findByRole("button", { name: "Switch to Ananya" });
     expect(document.querySelector(".parent-id-stack.has-three-or-more")).toBeInTheDocument();
     await interact.click(switchToAnanya);
-    expect(document.querySelector(".parent-id-stack.is-switching")).toBeInTheDocument();
+    await waitFor(() => expect(document.querySelector(".parent-id-stack.is-animating.direction-left")).toBeInTheDocument());
+    expect(document.querySelector(".parent-id-stack__incoming")).toHaveTextContent("Ananya Sharma");
     expect(await screen.findByRole("button", { name: /Open digital student ID for Ananya Sharma/ })).toBeVisible();
+    await waitFor(() => expect(screen.getByRole("button", { name: "Switch to Rohan" })).toBeEnabled());
     await interact.click(screen.getByRole("button", { name: "Switch to Rohan" }));
+    expect(await screen.findByRole("button", { name: /Open digital student ID for Rohan Sharma/ })).toBeVisible();
+    await waitFor(() => expect(screen.getByRole("button", { name: "Switch to Aarav" })).toBeEnabled());
+    const rohanCard = screen.getByRole("button", { name: /Open digital student ID for Rohan Sharma/ });
+    fireEvent.touchStart(rohanCard, { touches: [{ clientX: 80 }] });
+    fireEvent.touchEnd(rohanCard, { changedTouches: [{ clientX: 220 }] });
+    await waitFor(() => expect(document.querySelector(".parent-id-stack.is-animating.direction-right")).toBeInTheDocument());
+    expect(await screen.findByRole("button", { name: /Open digital student ID for Ananya Sharma/ })).toBeVisible();
+    await waitFor(() => expect(screen.getByRole("button", { name: "Switch to Rohan" })).toBeEnabled());
+    const ananyaCard = screen.getByRole("button", { name: /Open digital student ID for Ananya Sharma/ });
+    fireEvent.touchStart(ananyaCard, { touches: [{ clientX: 220 }] });
+    fireEvent.touchEnd(ananyaCard, { changedTouches: [{ clientX: 80 }] });
+    await waitFor(() => expect(document.querySelector(".parent-id-stack.is-animating.direction-left")).toBeInTheDocument());
     await interact.click(await screen.findByRole("button", { name: /Open digital student ID for Rohan Sharma/ }));
     expect(screen.getByRole("dialog", { name: "Rohan Sharma" })).toHaveTextContent("CIS-003");
-  });
+  }, 12000);
 
   it("renders the timetable as a weekly period chart without the old tab switcher", async () => {
     render(<MemoryRouter initialEntries={["/student/timetable"]}><App /></MemoryRouter>);

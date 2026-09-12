@@ -25,7 +25,7 @@ export function StudentIdentityCard({
 }: {
   identity: StudentIdentity;
   schoolName?: string;
-  switchChild?: { name: string; onSelect: () => void };
+  switchChild?: { name: string; onSelect: () => void; onSwipe?: (direction: "left" | "right") => void };
   showSwitchButton?: boolean;
   eyebrow?: string;
   primaryHeading?: boolean;
@@ -33,6 +33,7 @@ export function StudentIdentityCard({
   const [idOpen, setIdOpen] = useState(false);
   const [qrCodeUrl, setQrCodeUrl] = useState("");
   const touchStartX = useRef<number | null>(null);
+  const touchStartY = useRef<number | null>(null);
   const swiped = useRef(false);
   const initials = identity.studentName.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase();
   const crest = schoolName.split(/\s+/).filter(Boolean).map((word) => word[0]).join("").slice(0, 3).toUpperCase();
@@ -70,9 +71,10 @@ export function StudentIdentityCard({
   return <>
     <section className="student-home-id-card" aria-label={`Open digital student ID for ${identity.studentName}${switchChild ? `. Swipe to switch to ${switchChild.name}` : ""}`} role="button" tabIndex={0}
       onClick={() => { if (swiped.current) { swiped.current = false; return; } setIdOpen(true); }}
-      onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); setIdOpen(true); } }}
-      onTouchStart={(event) => { touchStartX.current = event.touches[0]?.clientX ?? null; }}
-      onTouchEnd={(event) => { if (switchChild && touchStartX.current !== null && Math.abs((event.changedTouches[0]?.clientX ?? touchStartX.current) - touchStartX.current) > 55) { swiped.current = true; switchChild.onSelect(); window.setTimeout(() => { swiped.current = false; }, 350); } touchStartX.current = null; }}>
+      onKeyDown={(event) => { if (switchChild?.onSwipe && (event.key === "ArrowLeft" || event.key === "ArrowRight")) { event.preventDefault(); switchChild.onSwipe(event.key === "ArrowLeft" ? "left" : "right"); } else if (event.key === "Enter" || event.key === " ") { event.preventDefault(); setIdOpen(true); } }}
+      onTouchStart={(event) => { touchStartX.current = event.touches[0]?.clientX ?? null; touchStartY.current = event.touches[0]?.clientY ?? null; }}
+      onTouchEnd={(event) => { if (switchChild && touchStartX.current !== null) { const touch = event.changedTouches[0]; const distance = (touch?.clientX ?? touchStartX.current) - touchStartX.current; const verticalDistance = (touch?.clientY ?? touchStartY.current ?? 0) - (touchStartY.current ?? 0); if (Math.abs(distance) > 55 && Math.abs(distance) > Math.abs(verticalDistance) * 1.2) { swiped.current = true; if (switchChild.onSwipe) switchChild.onSwipe(distance > 0 ? "right" : "left"); else switchChild.onSelect(); window.setTimeout(() => { swiped.current = false; }, 250); } } touchStartX.current = null; touchStartY.current = null; }}
+      onTouchCancel={() => { touchStartX.current = null; touchStartY.current = null; }}>
       <header><span>{identity.dateLabel}</span><span><BadgeCheck size={14} /> Active student</span></header>
       <div className="student-home-id-card__identity">
         <span className="student-home-avatar" aria-hidden="true">{identity.avatarUrl ? <img src={identity.avatarUrl} alt="" /> : initials}</span>
