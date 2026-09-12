@@ -159,7 +159,6 @@
 .urgent-leave-card__actions .button svg { flex: 0 0 auto; }
 .parent-app .student-home-id-card h1 { margin: 1px 0 0; }
 .parent-app .student-home-id-card p { margin: 0; }
-.parent-app .student-id-view { z-index: 80; }
 .parent-id-stack { position: relative; isolation: isolate; perspective: 1000px; }
 .parent-id-stack.has-multiple { padding-bottom: 18px; }
 .parent-id-stack.has-multiple::before,

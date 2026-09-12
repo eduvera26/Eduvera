@@ -130,6 +130,21 @@ describe("implemented application routes", () => {
     expect(await screen.findByText("Overall Aggregate")).toBeVisible();
   }, 12000);
 
+  it("opens the parent's full student ID above the card deck with a visible close control", async () => {
+    const interact = userEvent.setup();
+    render(<MemoryRouter initialEntries={["/parent/home"]}><App /></MemoryRouter>);
+    await interact.click(await screen.findByRole("button", { name: /Open digital student ID for Aarav Sharma/ }));
+    const dialog = screen.getByRole("dialog", { name: "Aarav Sharma" });
+    expect(dialog).toBeVisible();
+    expect(dialog.parentElement).toBe(document.body);
+    expect(dialog).toHaveClass("student-id-view--parent");
+    expect(within(dialog).getByText("Digital Student Identity")).toBeVisible();
+    const close = within(dialog).getByRole("button", { name: "Close digital student ID" });
+    expect(close).toBeVisible();
+    await interact.click(close);
+    expect(screen.queryByRole("dialog", { name: "Aarav Sharma" })).not.toBeInTheDocument();
+  });
+
   it("opens the full attendance standings from each top student and the student's own row", async () => {
     const interact = userEvent.setup();
     render(<MemoryRouter initialEntries={["/student/attendance"]}><App /></MemoryRouter>);
