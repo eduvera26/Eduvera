@@ -183,6 +183,7 @@ def set_variables(project_id: str, service_id: str, env_id: str, public_url: str
         "AI_PROVIDER": "mock",
         "LOG_LEVEL": "info",
         "DATABASE_POOL_MAX": "5",
+        "PORT": "8000",   # Railway injects its own PORT otherwise; the domain targets 8000
     }
     gql(
         """mutation($input: VariableCollectionUpsertInput!) { variableCollectionUpsert(input: $input) }""",
