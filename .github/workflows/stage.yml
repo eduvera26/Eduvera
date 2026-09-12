@@ -4,6 +4,11 @@ on:
   push:
     branches: [Stage]
   workflow_dispatch:
+    inputs:
+      seed:
+        description: "Re-apply the demo seed to the shared database (upsert; run on demand, not per push)"
+        type: boolean
+        default: false
 
 concurrency:
   group: stage
@@ -12,8 +17,9 @@ concurrency:
 jobs:
   # Runs on GitHub: everything must typecheck, lint, build and pass tests
   # against the shared Supabase database (repo secret DATABASE_URL) before
-  # anything is deployed. Migrations are idempotent, the seed is an upsert,
-  # and the suite cleans up the rows it creates.
+  # anything is deployed. Migrations are idempotent (a no-op when nothing is
+  # pending) and the suite cleans up the rows it creates. The demo seed is
+  # already in the shared database; it is only re-applied when asked for.
   verify:
     name: Verify
     runs-on: ubuntu-latest
@@ -40,10 +46,14 @@ jobs:
           npm run lint
           npm run build
 
-      - name: Backend · migrate and seed the shared database
+      - name: Backend · apply pending migrations
+        working-directory: backend
+        run: npm run db:migrate
+
+      - name: Backend · re-seed demo data (only when requested)
+        if: github.event_name == 'workflow_dispatch' && inputs.seed
         working-directory: backend
         run: |
-          npm run db:migrate
           python3 scripts/generate_school_data.py
           node --import tsx src/database/seed.ts
 
