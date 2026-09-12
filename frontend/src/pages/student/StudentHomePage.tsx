@@ -158,7 +158,11 @@ export function StudentHomePage({ data }: { data: StudentHomeData }) {
     return data.schedule.filter((_, index) => Math.abs(index - focusIndex) <= 1);
   }, [data.schedule, focusPeriod]);
   const attendanceSafe = data.attendancePercent >= data.attendanceThreshold;
-  const attendanceScoreTone = attendanceSafe ? "is-safe" : "is-danger";
+  const attendanceScoreTone = attendanceSafe
+    ? "is-green"
+    : data.attendancePercent >= data.attendanceThreshold - 10
+      ? "is-yellow"
+      : "is-orange";
   const kitItems = useMemo(() => todaysKit(data.schedule), [data.schedule]);
   const packedCount = kitItems.filter((item) => checkedKit[item.id]).length;
   const qrPayload = useMemo(() => JSON.stringify({
@@ -311,7 +315,7 @@ export function StudentHomePage({ data }: { data: StudentHomeData }) {
           <header><div><h2 id="student-home-overview-heading">Your day at a glance</h2></div><b>Live</b></header>
           <div>
             <button type="button" onClick={() => navigate("/student/attendance")}>
-              <span className="tone-blue"><ClipboardCheck size={19} /></span><small>Attendance</small><strong>{data.attendancePercent.toFixed(1)}%</strong><em className={attendanceSafe ? "is-safe" : "is-warning"}>{attendanceSafe ? "Safe zone" : "Needs attention"}</em>
+              <span className="tone-blue"><ClipboardCheck size={19} /></span><small>Attendance</small><strong className={attendanceScoreTone}>{data.attendancePercent.toFixed(1)}%</strong><em className={attendanceSafe ? "is-safe" : "is-warning"}>{attendanceSafe ? "Safe zone" : "Needs attention"}</em>
             </button>
             <button type="button" onClick={() => navigate("/student/timetable")}>
               <span className="tone-violet"><CalendarClock size={19} /></span><small>Classes today</small><strong>{data.periodsToday}</strong><em>Published periods</em>
