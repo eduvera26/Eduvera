@@ -1,0 +1,8 @@
+node_modules/
+dist/
+.env
+storage/leave-documents/*
+!storage/leave-documents/.gitkeep
+*.log
+coverage/
+generated/

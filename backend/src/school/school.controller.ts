@@ -1,0 +1,237 @@
+import { Controller, Delete, Get, HttpCode, Param, Patch, Post, Query, Req, Res } from "@nestjs/common";
+import { ApiCookieAuth, ApiTags } from "@nestjs/swagger";
+import type { FastifyReply } from "fastify";
+import type { AuthenticatedRequest } from "../common/request.js";
+import { SchoolService, type UploadInput } from "./school.service.js";
+
+async function bodyAndUpload(request: AuthenticatedRequest): Promise<{ body: Record<string, unknown>; upload?: UploadInput }> {
+  if (!request.isMultipart()) return { body: (request.body ?? {}) as Record<string, unknown> };
+  const body: Record<string, unknown> = {};
+  let upload: UploadInput | undefined;
+  for await (const part of request.parts()) {
+    if (part.type === "file") {
+      if (part.fieldname !== "file") continue;
+      if (upload) throw new (await import("@nestjs/common")).BadRequestException("Only one supporting document may be uploaded at a time.");
+      upload = { filename: part.filename, mimetype: part.mimetype, data: await part.toBuffer() };
+    } else {
+      body[part.fieldname] = part.value;
+    }
+  }
+  return { body, ...(upload ? { upload } : {}) };
+}
+
+@ApiTags("school")
+@ApiCookieAuth()
+@Controller("api/v1")
+export class SchoolController {
+  constructor(private readonly school: SchoolService) {}
+
+  @Get("students/")
+  async students(@Req() request: AuthenticatedRequest) {
+    return { results: await this.school.accessibleStudentDtos(request.authUser) };
+  }
+
+  @Get("students/attendance/subjects/")
+  async subjectAttendance(@Req() request: AuthenticatedRequest, @Query("student_id") studentId?: string) {
+    const student = await this.school.studentForUser(request.authUser, studentId);
+    const enrollment = await this.school.enrollment(student.id);
+    return { term_id: enrollment.term_id, results: await this.school.subjectAttendance(student.id, enrollment.term_id) };
+  }
+
+  @Get("students/gate-events/")
+  async gateEvents(@Req() request: AuthenticatedRequest, @Query("student_id") studentId?: string) {
+    const student = await this.school.studentForUser(request.authUser, studentId);
+    return { results: await this.school.latestGate(student.id) ? await this.school.dbGateEvents(student.id) : [] };
+  }
+
+  @Get("students/timetable/")
+  async timetable(@Req() request: AuthenticatedRequest, @Query("student_id") studentId?: string, @Query("weekday") weekdayValue?: string) {
+    const student = await this.school.studentForUser(request.authUser, studentId);
+    const enrollment = await this.school.enrollment(student.id);
+    const weekday = weekdayValue === undefined ? undefined : Number(weekdayValue);
+    if (weekday !== undefined && (!Number.isInteger(weekday) || weekday < 1 || weekday > 7)) throw new (await import("@nestjs/common")).BadRequestException("weekday must be an integer from 1 to 7.");
+    return { results: await this.school.timetable(enrollment, weekday) };
+  }
+
+  @Get("attendance-records/")
+  async attendanceRecords(@Req() request: AuthenticatedRequest, @Query("student_id") studentId?: string) {
+    const student = await this.school.studentForUser(request.authUser, studentId);
+    return { results: await this.school.attendanceRecords(student.id) };
+  }
+
+  @Post("attendance-records/")
+  async attendanceCreate(@Req() request: AuthenticatedRequest) {
+    return this.school.attendanceCreate(request.authUser, request.body);
+  }
+
+  @Patch("attendance-records/:id/")
+  async attendanceUpdate(@Req() request: AuthenticatedRequest, @Param("id") id: string) {
+    return this.school.attendanceUpdate(request.authUser, id, request.body);
+  }
+
+  @Get("leave-requests/")
+  async leaves(@Req() request: AuthenticatedRequest, @Query("student_id") studentId?: string, @Query("status") status?: string) {
+    return { results: await this.school.leaveList(request.authUser, studentId, status, request) };
+  }
+
+  @Post("leave-requests/")
+  async createLeave(@Req() request: AuthenticatedRequest) {
+    const parsed = await bodyAndUpload(request);
+    return this.school.createLeave(request.authUser, parsed.body, parsed.upload, request);
+  }
+
+  @Get("leave-requests/:leaveId/")
+  async leave(@Req() request: AuthenticatedRequest, @Param("leaveId") leaveId: string) {
+    await this.school.leaveForUser(request.authUser, leaveId);
+    return this.school.leaveDto(leaveId, request);
+  }
+
+  @Post("leave-requests/:leaveId/documents/")
+  async addDocument(@Req() request: AuthenticatedRequest, @Param("leaveId") leaveId: string) {
+    const parsed = await bodyAndUpload(request);
+    if (!parsed.upload) throw new (await import("@nestjs/common")).BadRequestException("A file is required.");
+    return this.school.addLeaveDocument(request.authUser, leaveId, parsed.upload, request);
+  }
+
+  @Get("leave-requests/:leaveId/documents/:documentId/download/")
+  async downloadDocument(@Req() request: AuthenticatedRequest, @Res() reply: FastifyReply, @Param("leaveId") leaveId: string, @Param("documentId") documentId: string) {
+    const { document, stream } = await this.school.leaveDocument(request.authUser, leaveId, documentId);
+    const filename = document.original_name.replace(/[\r\n"]/g, "_");
+    reply.type(document.content_type || "application/octet-stream");
+    reply.header("Content-Disposition", `inline; filename="${filename}"`);
+    return reply.send(stream);
+  }
+
+  @Post("leave-requests/:leaveId/:action/")
+  @HttpCode(200)
+  async leaveAction(@Req() request: AuthenticatedRequest, @Param("leaveId") leaveId: string, @Param("action") action: string) {
+    return this.school.performLeaveAction(request.authUser, leaveId, action, (request.body as any)?.note, request);
+  }
+
+  @Get("diary/")
+  async diary(@Req() request: AuthenticatedRequest, @Query("student_id") studentId?: string, @Query("date_from") dateFrom?: string, @Query("date_to") dateTo?: string) {
+    const student = await this.school.studentForUser(request.authUser, studentId);
+    const enrollment = await this.school.enrollment(student.id);
+    return { results: await this.school.diaryItems(student.id, enrollment, dateFrom, dateTo) };
+  }
+
+  @Post("diary/:itemId/acknowledge/")
+  async acknowledge(@Req() request: AuthenticatedRequest, @Res({ passthrough: true }) reply: FastifyReply, @Param("itemId") itemId: string) {
+    const result = await this.school.acknowledgeDiary(request.authUser, itemId, (request.body as any)?.student_id);
+    reply.status(result.created ? 201 : 200);
+    return result.data;
+  }
+
+  @Post("diary/:itemId/notes/")
+  async note(@Req() request: AuthenticatedRequest, @Param("itemId") itemId: string) {
+    return this.school.addDiaryNote(request.authUser, itemId, (request.body as any)?.student_id, (request.body as any)?.body);
+  }
+
+  @Get("notifications/")
+  async notifications(@Req() request: AuthenticatedRequest) {
+    return { results: await this.school.notifications(request.authUser) };
+  }
+
+  @Post("notifications/:notificationId/read/")
+  @HttpCode(200)
+  async notificationRead(@Req() request: AuthenticatedRequest, @Param("notificationId") notificationId: string) {
+    return this.school.markNotificationRead(request.authUser, notificationId);
+  }
+
+  @Get("screens/parent/home/")
+  parentHome(@Req() request: AuthenticatedRequest, @Query("student_id") studentId?: string) {
+    return this.school.parentHome(request.authUser, studentId);
+  }
+
+  @Get("screens/parent/attendance/")
+  parentAttendance(@Req() request: AuthenticatedRequest, @Query("student_id") studentId?: string) {
+    return this.school.parentAttendance(request.authUser, studentId);
+  }
+
+  @Get("screens/parent/diary/")
+  parentDiary(@Req() request: AuthenticatedRequest, @Query("student_id") studentId?: string, @Query("date") date?: string) {
+    return this.school.parentDiary(request.authUser, studentId, date);
+  }
+
+  @Get("screens/parent/leave/:leaveId/")
+  parentLeave(@Req() request: AuthenticatedRequest, @Param("leaveId") leaveId: string, @Query("student_id") studentId?: string) {
+    return this.school.parentLeave(request.authUser, leaveId, studentId, request);
+  }
+
+  @Get("screens/parent/timetable/:mode/")
+  parentTimetable(@Req() request: AuthenticatedRequest, @Param("mode") mode: string, @Query("student_id") studentId?: string, @Query("date") date?: string) {
+    return this.school.timetableScreen(request.authUser, mode, studentId, date, "guardian");
+  }
+
+  @Get("screens/student/attendance/")
+  studentAttendance(@Req() request: AuthenticatedRequest, @Query("student_id") studentId?: string) {
+    return this.school.studentAttendanceScreen(request.authUser, studentId);
+  }
+
+  @Get("screens/student/home/")
+  studentHome(@Req() request: AuthenticatedRequest, @Query("student_id") studentId?: string) {
+    return this.school.studentHomeScreen(request.authUser, studentId);
+  }
+
+  @Get("screens/student/attendance/eligibility/")
+  eligibility(@Req() request: AuthenticatedRequest, @Query("student_id") studentId?: string, @Query("subject_id") subjectId?: string, @Query("additional_missed") missed?: string) {
+    return this.school.eligibilityScreen(request.authUser, studentId, subjectId, missed);
+  }
+
+  @Get("screens/student/timetable/:mode/")
+  studentTimetable(@Req() request: AuthenticatedRequest, @Param("mode") mode: string, @Query("student_id") studentId?: string, @Query("date") date?: string) {
+    return this.school.timetableScreen(request.authUser, mode, studentId, date);
+  }
+
+  @Get("screens/student/leave/apply/")
+  leaveApply(@Req() request: AuthenticatedRequest, @Query("student_id") studentId?: string) {
+    return this.school.leaveApplyScreen(request.authUser, studentId, request);
+  }
+
+  @Get("screens/student/leave/status/")
+  leaveStatus(@Req() request: AuthenticatedRequest, @Query("student_id") studentId?: string) {
+    return this.school.leaveStatusScreen(request.authUser, studentId, request);
+  }
+
+  @Get("screens/teacher/home/")
+  teacherHome(@Req() request: AuthenticatedRequest, @Query("date") date?: string) {
+    return this.school.teacherHomeScreen(request.authUser, date);
+  }
+
+  @Get("screens/teacher/attendance/")
+  teacherAttendance(@Req() request: AuthenticatedRequest, @Query("class_section_id") classSectionId?: string, @Query("date") date?: string) {
+    return this.school.teacherAttendanceScreen(request.authUser, classSectionId, date);
+  }
+
+  @Post("teacher/attendance/bulk/")
+  @HttpCode(200)
+  teacherAttendanceSave(@Req() request: AuthenticatedRequest) {
+    return this.school.saveTeacherAttendance(request.authUser, request.body, request);
+  }
+
+  @Get("screens/principal/home/")
+  principalHome(@Req() request: AuthenticatedRequest, @Query("date") date?: string) {
+    return this.school.principalHomeScreen(request.authUser, date);
+  }
+
+  @Get("screens/principal/timetable/")
+  principalTimetable(@Req() request: AuthenticatedRequest) {
+    return this.school.principalTimetableScreen(request.authUser);
+  }
+
+  @Post("principal/timetable/slots/")
+  principalTimetableCreate(@Req() request: AuthenticatedRequest) {
+    return this.school.createTimetableSlot(request.authUser, request.body, request);
+  }
+
+  @Patch("principal/timetable/slots/:slotId/")
+  principalTimetableUpdate(@Req() request: AuthenticatedRequest, @Param("slotId") slotId: string) {
+    return this.school.updateTimetableSlot(request.authUser, slotId, request.body, request);
+  }
+
+  @Delete("principal/timetable/slots/:slotId/")
+  @HttpCode(200)
+  principalTimetableDelete(@Req() request: AuthenticatedRequest, @Param("slotId") slotId: string) {
+    return this.school.deleteTimetableSlot(request.authUser, slotId, request);
+  }
+}

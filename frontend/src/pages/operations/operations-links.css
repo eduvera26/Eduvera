@@ -1,0 +1,60 @@
+.operations-action-link {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #2156d9;
+  font-size: 12px;
+  font-weight: 800;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.principal-slot-edit,
+.timetable-delete {
+  border: 0;
+  background: transparent;
+  color: #52617d;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.principal-slot-edit {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 5px;
+}
+
+.timetable-delete {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #b33838;
+}
+
+@media (max-width: 1180px) and (min-width: 681px) {
+  .operations-app {
+    grid-template-columns: 82px minmax(0, 1fr);
+  }
+
+  .operations-sidebar {
+    padding: 22px 12px;
+  }
+
+  .operations-brand > div,
+  .operations-sidebar nav a span,
+  .operations-sidebar__scope {
+    display: none;
+  }
+
+  .operations-brand,
+  .operations-sidebar nav a {
+    justify-content: center;
+  }
+
+  .teacher-class-list > article {
+    grid-template-columns: 90px minmax(160px, 1fr) 104px 74px 126px;
+  }
+}

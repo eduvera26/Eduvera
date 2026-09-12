@@ -1,0 +1,179 @@
+import type {
+  AttendanceCalendarDay,
+  ParentAttendanceData,
+  ParentChildSummary,
+  ParentDiaryData,
+  ParentHomeData,
+  ParentLeaveData,
+} from "./parentTypes";
+
+export const demoParentChild: ParentChildSummary = {
+  id: "aarav-sharma",
+  name: "Aarav Sharma",
+  grade: "Grade 7",
+  section: "A",
+  board: "CBSE",
+  rollNumber: "01",
+  avatarUrl: "/assets/aarav-sharma.png",
+};
+
+export const fallbackHomeData: ParentHomeData = {
+  child: demoParentChild,
+  sibling: { id: "ananya-sharma", name: "Ananya", grade: "Grade 4", section: "B" },
+  presence: { status: "In School", detail: "Gate 2 swipe at 07:48 AM" },
+  pendingLeave: {
+    id: "REQ-2026-884",
+    title: "Medical Leave Form",
+    submittedLabel: "Submitted 2h ago",
+    summary: "Viral Fever recuperation",
+    durationLabel: "2 Days (28 Oct – 29 Oct)",
+  },
+  unreadDiaryCount: 1,
+  diarySender: "Mrs. K. Sharma (Class Teacher)",
+  currentPeriod: {
+    number: 3,
+    startsAt: "10:15 AM",
+    endsAt: "11:00 AM",
+    remainingLabel: "25m remaining",
+    subject: "Mathematics",
+    topic: "Linear Equations",
+    room: "Room 204",
+    teacher: "Prof. Rajesh Mehta",
+    progressPercent: 45,
+  },
+  nextPeriod: { number: 4, subject: "General Science", room: "Lab 2", startsAt: "11:05 AM" },
+  metrics: {
+    attendance: "94.2%",
+    attendanceStatus: "Safe Zone",
+    threshold: "> 85% req",
+    periodsToday: 7,
+    dismissal: "02:30 PM",
+    homeworkTasks: 2,
+    homeworkDetail: "Due tomorrow",
+    duesStatus: "All Cleared",
+    duesDetail: "Term 2 due Nov 15",
+    termLabel: "Term 1 (2026–27)",
+  },
+  homeroomTeacher: { name: "Mrs. K. Sharma", availability: "Available until 3:30 PM" },
+  transport: { passLabel: "Live Route & Bus Pass #14", pickupWindow: "Pickup window: 02:45 PM at Stop C" },
+};
+
+const calendarStatuses: AttendanceCalendarDay["status"][] = [
+  "present", "present", "present", "excused", "present", "weekend", "weekend",
+  "present", "present", "present", "present", "present", "weekend", "weekend",
+];
+
+export const fallbackAttendanceData: ParentAttendanceData = {
+  child: demoParentChild,
+  termLabel: "Term 1 • 2026–27",
+  aggregatePercent: 94.2,
+  trendPercent: 1.4,
+  safeCushionDays: 12,
+  minimumPercent: 85,
+  stats: {
+    attended: 119,
+    totalDays: 126,
+    dailyRatePercent: 94.4,
+    activeStreakDays: 14,
+    streakDetail: "Personal best",
+    excusedCount: 5,
+    excusedDetail: "Medical & sports",
+    pendingCount: 2,
+    pendingDetail: "Awaiting clinic note",
+  },
+  today: {
+    checkInTime: "07:48 AM",
+    checkInLocation: "Main Gate Turnstile A",
+    checkInSource: "RFID Scanned",
+    checkInVerified: true,
+    dismissalTime: "02:30 PM",
+    dismissalDetail: "Designated Bus Route #14 (Bay 3)",
+  },
+  month: {
+    label: "September 2026",
+    summary: { present: 20, excused: 1, unexcused: 0 },
+    days: calendarStatuses.map((status, index) => ({
+      id: `2026-09-${String(index + 7).padStart(2, "0")}`,
+      day: index + 7,
+      status,
+      ariaLabel: `September ${index + 7}, ${status}`,
+    })),
+  },
+  subjects: [
+    { id: "pe", name: "Physical Education", percent: 100, status: "Optimal", tone: "excellent" },
+    { id: "cs", name: "Computer Science", percent: 98, status: "Safe", tone: "safe" },
+    { id: "math", name: "Mathematics", percent: 96, status: "Safe", tone: "safe" },
+    { id: "chemistry", name: "Chemistry", percent: 95, status: "Safe", tone: "safe" },
+    { id: "physics", name: "Physics Lab", percent: 92, status: "Good", tone: "good" },
+    { id: "english", name: "English", percent: 90, status: "Near Min", tone: "warning" },
+  ],
+};
+
+export const fallbackLeaveData: ParentLeaveData = {
+  child: demoParentChild,
+  guardian: { name: "Pooja Sharma", relationship: "Mother" },
+  canAuthorize: true,
+  request: {
+    id: "REQ-2026-884",
+    title: "Leave Application by Aarav",
+    submittedLabel: "Submitted Today, 07:15 AM",
+    category: "Medical / Viral Fever",
+    durationLabel: "2 School Days",
+    rangeLabel: "28 Oct, Wed – 29 Oct, Thu",
+    impactedPeriods: 14,
+    studentNote: "Doctor has advised rest due to seasonal viral fever and mild throat infection. Prescription attached.",
+    document: {
+      id: "medical-doc-884",
+      name: "Prescription_Clinic_28Oct.pdf",
+      sizeLabel: "1.4 MB",
+      canOpen: false,
+      issuer: "Apex Pediatrics Care",
+      advice: "Prescribed Cetirizine + Paracetamol, isolation for 48 hrs, and plenty of fluids. Physical activity exempt.",
+    },
+    initialGuardianRemark: "Doctor prescribed Aarav complete bed rest and medication for 48 hours.",
+  },
+  academicYearLabel: "Academic Year ’26–’27",
+  history: [
+    { id: "leave-dental", title: "Dental Appointment", dateLabel: "12 Sep 2026", durationLabel: "1 Day", approvedBy: "Mrs. K. Sharma", kind: "medical" },
+    { id: "leave-wedding", title: "Sister's Wedding", dateLabel: "18–19 Aug 2026", durationLabel: "2 Days", approvedBy: "Principal Office", kind: "family" },
+  ],
+};
+
+export const fallbackDiaryData: ParentDiaryData = {
+  child: demoParentChild,
+  termLabel: "Academic Term 1 • Week 12",
+  weekLabel: "Week 12",
+  dateHeading: "Wednesday, 16 Sep 2026",
+  selectedDayId: "2026-09-16",
+  days: [
+    { id: "2026-09-14", weekday: "Mon", day: 14 },
+    { id: "2026-09-15", weekday: "Tue", day: 15 },
+    { id: "2026-09-16", weekday: "Wed", day: 16, isToday: true },
+    { id: "2026-09-17", weekday: "Thu", day: 17 },
+    { id: "2026-09-18", weekday: "Fri", day: 18 },
+    { id: "2026-09-19", weekday: "Sat", day: 19 },
+  ],
+  currentPeriod: { number: 3, stateLabel: "Period 3 in Session", dayRangeLabel: "08:30 AM – 02:45 PM", subject: "Mathematics", room: "Room 204", teacher: "Prof. Rajesh Mehta", untilLabel: "Until 10:45 AM" },
+  packingItems: [
+    { id: "lab-coat", label: "White Physics Lab Coat (Period 4)", detail: "Required", status: "required", packed: true },
+    { id: "geometry-box", label: "Geometry Compass Box", detail: "Maths Ex 4.2", status: "normal", packed: true },
+    { id: "sports-shirt", label: "House Blue Sports T-Shirt (Period 7)", detail: "Pending", status: "pending", packed: false },
+  ],
+  schedule: [
+    { id: "p1", period: 1, timeLabel: "08:30", subject: "English Literature", location: "Room 204", teacher: "Mrs. C. Roy", state: "complete" },
+    { id: "p2", period: 2, timeLabel: "09:15", subject: "Hindi Language", location: "Room 204", teacher: "Mr. Sharma", state: "complete" },
+    { id: "p3", period: 3, timeLabel: "10:00", subject: "Mathematics", location: "Room 204", teacher: "Prof. R. Mehta", state: "current" },
+    { id: "p4", period: 4, timeLabel: "10:50", subject: "Physics Lab", location: "Lab Hall B", teacher: "Dr. Sunita" },
+    { id: "p5", period: 5, timeLabel: "11:35", subject: "Social Science", location: "Room 204", teacher: "Mrs. N. Joshi" },
+    { id: "p6", period: 6, timeLabel: "01:15", subject: "Computer Coding", location: "Lab 2", teacher: "Mrs. Verma" },
+    { id: "p7", period: 7, timeLabel: "02:00", subject: "Physical Education", location: "Main Grounds", teacher: "Coach Bawa" },
+  ],
+  diaryEntries: [
+    { id: "math-homework", subject: "Mathematics", kind: "Homework", tone: "primary", body: "Complete Exercise 4.2 (Linear Equations, Q1 to Q8) in Homework Notebook. Bring Geometry box tomorrow for angle bisector constructions.", author: "Prof. Rajesh Mehta", timeLabel: "10:30 AM", verified: true },
+    { id: "english-test", subject: "English Literature", kind: "Upcoming Test", tone: "danger", body: "Unit Test on Friday: Chapter 3 poem recitation and vocabulary definitions. Please ensure Aarav practices stanzas 1–4 orally.", author: "Mrs. Catherine Roy", timeLabel: "09:55 AM" },
+    { id: "sports-circular", subject: "Homeroom Notice", kind: "School Circular", tone: "neutral", body: "Annual Sports Day circular sent with student. Please review the 4×100m track relay consent form and return with signature by tomorrow morning.", author: "Class 7A Homeroom Desk" },
+  ],
+  guardian: { name: "Pooja Sharma", relationship: "Mother", verifiedId: "#PAR-9824" },
+  requiresAcknowledgement: true,
+  isAcknowledged: false,
+};
