@@ -56,7 +56,7 @@ export interface ParentHomeData {
   transport: { passLabel: string; pickupWindow: string };
 }
 
-export type AttendanceCalendarStatus = "present" | "excused" | "unexcused" | "weekend" | "future" | "not_recorded";
+export type AttendanceCalendarStatus = "present" | "late" | "half_day" | "excused" | "unexcused" | "weekend" | "future" | "not_recorded";
 
 export interface AttendanceCalendarDay {
   id: string;
@@ -89,6 +89,7 @@ export interface ParentAttendanceData {
     checkInSource: string;
     checkInVerified: boolean;
     dismissalTime: string;
+    dismissalRecorded?: boolean;
     dismissalDetail: string;
   };
   month: {

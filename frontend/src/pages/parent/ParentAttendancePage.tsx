@@ -80,7 +80,7 @@ export function ParentAttendancePage({
     <ParentShell active="attendance" pageLabel="Attendance" child={data.child} onSelectChild={onSelectChild}>
       <div className="parent-stack attendance-page">
         <div className="attendance-context-row">
-          <span><span className="presence-dot" />Campus Presence</span>
+          <span>Attendance overview</span>
           <strong>{data.termLabel}</strong>
         </div>
 
@@ -102,7 +102,7 @@ export function ParentAttendancePage({
           </div>
           <div className="aggregate-card__cushion">
             <ShieldCheck size={18} />
-            <span><strong>Safe Zone: +{data.safeCushionDays} Days</strong> cushion buffer before {data.minimumPercent}% CBSE minimum threshold.</span>
+            <span><strong>{data.stats.totalDays === 0 ? "No attendance records yet." : data.aggregatePercent < data.minimumPercent ? "Below the school minimum." : `Safe buffer: ${data.safeCushionDays} days.`}</strong> School minimum: {data.minimumPercent}%.</span>
           </div>
         </section>
 
@@ -142,8 +142,8 @@ export function ParentAttendancePage({
             </article>
             <article>
               <span className="presence-event-icon presence-event-icon--muted"><Bus size={18} /></span>
-              <div><strong>Expected Dismissal</strong><time>{data.today.dismissalTime}</time><small>{data.today.dismissalDetail}</small></div>
-              <span className="mini-status">Scheduled</span>
+              <div><strong>{data.today.dismissalRecorded ? "Recorded Checkout" : "Expected Dismissal"}</strong><time>{data.today.dismissalTime}</time><small>{data.today.dismissalDetail}</small></div>
+              <span className="mini-status">{data.today.dismissalRecorded ? "Recorded" : data.today.dismissalTime === "—" ? "Not published" : "Scheduled"}</span>
             </article>
           </div>
         </section>
@@ -162,7 +162,7 @@ export function ParentAttendancePage({
             <div className="calendar-weekdays" aria-hidden="true">
               {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((day, index) => <span key={`${day}-${index}`}>{day}</span>)}
             </div>
-            <div className="calendar-grid" role="grid" aria-label={data.month.label}>
+            <div className="calendar-grid" role="group" aria-label={data.month.label}>
               {Array.from({ length: leadingBlankDays }, (_, index) => <span className="calendar-day-placeholder" aria-hidden="true" key={`blank-${index}`} />)}
               {data.month.days.map((day) => (
                 <button
@@ -187,7 +187,7 @@ export function ParentAttendancePage({
             {selectedDay ? (
               <div className={`calendar-selected-detail calendar-selected-detail--${selectedDay.status}`} role="status">
                 <strong>{selectedDay.ariaLabel.split(",")[0]}</strong>
-                <span>{selectedDay.status === "present" ? "Present in the attendance register" : selectedDay.status === "excused" ? "Excused absence" : selectedDay.status === "unexcused" ? "Unexcused absence in the register" : selectedDay.status === "weekend" ? "School weekend" : selectedDay.status === "not_recorded" ? "No attendance record was published" : "Attendance has not been recorded yet"}</span>
+                <span>{selectedDay.status === "present" ? "Present in the attendance register" : selectedDay.status === "late" ? "Late arrival recorded" : selectedDay.status === "half_day" ? "Half day attended" : selectedDay.status === "excused" ? "Excused absence" : selectedDay.status === "unexcused" ? "Unexcused absence in the register" : selectedDay.status === "weekend" ? "School weekend" : selectedDay.status === "not_recorded" ? "No attendance record was published" : "Attendance has not been recorded yet"}</span>
               </div>
             ) : null}
           </div>
@@ -199,6 +199,7 @@ export function ParentAttendancePage({
             <span className="threshold-label">Threshold: {data.minimumPercent}%</span>
           </div>
           <div className="surface-card subject-attendance-card">
+            {data.subjects.length === 0 ? <p className="parent-empty-state">No subject attendance published yet.</p> : null}
             {data.subjects.map((subject) => (
               <article key={subject.id}>
                 <div className="subject-attendance-card__labels">

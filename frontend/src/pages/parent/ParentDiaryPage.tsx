@@ -69,8 +69,8 @@ export function ParentDiaryPage({
   const [note, setNote] = useState("");
   const [noteState, setNoteState] = useState<AsyncState>("idle");
 
-  const packedCount = useMemo(() => Object.values(packed).filter(Boolean).length, [packed]);
-  const preferredSchedulePreview = data.schedule.filter((period) => period.period === 4 || period.period === 7);
+  const packedCount = useMemo(() => data.packingItems.filter((item) => packed[item.id]).length, [data.packingItems, packed]);
+  const preferredSchedulePreview = data.schedule.filter((period) => period.state !== "complete").slice(0, 2);
   const schedulePreview = preferredSchedulePreview.length ? preferredSchedulePreview : data.schedule.slice(0, 2);
   const classLabel = `Class ${data.child.grade.replace("Grade ", "")}${data.child.section}`;
   const childFirstName = data.child.name.split(" ")[0] ?? data.child.name;
@@ -204,7 +204,7 @@ export function ParentDiaryPage({
               <article className="surface-card teacher-note" key={entry.id}>
                 <div className="teacher-note__title"><h3><i className={`note-dot note-dot--${entry.tone}`} />{entry.subject}</h3><span className={`note-kind note-kind--${entry.tone}`}>{entry.kind}</span></div>
                 <p>{entry.body}</p>
-                <div className="teacher-note__meta"><span><UserRound size={14} />{entry.author}{entry.timeLabel ? ` • ${entry.timeLabel}` : ""}</span>{entry.verified ? <strong><CheckCircle2 size={14} />Verified</strong> : null}</div>
+                <div className="teacher-note__meta"><span><UserRound size={14} />{entry.author}{entry.timeLabel ? ` • ${entry.timeLabel}` : ""}</span>{entry.verified ? <strong><CheckCircle2 size={14} />Acknowledged</strong> : null}</div>
                 {entry.attachmentLabel && onOpenAttachment ? <button type="button" onClick={() => void onOpenAttachment(entry.id)}><Paperclip size={15} />{entry.attachmentLabel}</button> : null}
               </article>
             ))}
@@ -213,7 +213,7 @@ export function ParentDiaryPage({
 
         <section className="surface-card diary-signoff" aria-labelledby="diary-signoff-heading">
           <div className="diary-signoff__heading"><span><PenLine size={20} /></span><div><h2 id="diary-signoff-heading">Daily Parent Sign-off</h2><p>Acknowledgment for {classLabel} diary</p></div></div>
-          {signatureState === "success" ? (
+          {(data.isAcknowledged || signatureState === "success") ? (
             <div className="signed-box" role="status">
               <CheckCircle2 size={23} />
               <div><strong>Digitally Signed & Acknowledged</strong><span>Signed • {data.guardian.name} ({data.guardian.relationship})</span><small>Edura Parent Verified ID: {data.guardian.verifiedId}</small></div>
@@ -224,7 +224,7 @@ export function ParentDiaryPage({
             <div className="signature-box">
               <div className="signature-box__status"><ShieldCheck size={19} /><strong>Acknowledgment Pending</strong></div>
               <p>By signing, you confirm that {data.child.name} has reviewed the homework and preparation requirements shown above.</p>
-              <button className="button button--primary button--primary-deep" type="button" disabled={signatureState === "pending"} onClick={() => void acknowledge()}>
+              <button className="button button--primary button--primary-deep" type="button" disabled={!onAcknowledge || signatureState === "pending"} onClick={() => void acknowledge()}>
                 {signatureState === "pending" ? <LoaderCircle className="spin" size={17} /> : <BookOpenCheck size={17} />}
                 {signatureState === "pending" ? "Signing…" : "Tap to Sign This Diary"}
               </button>

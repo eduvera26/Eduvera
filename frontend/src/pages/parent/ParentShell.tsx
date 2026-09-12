@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useIsFetching, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, type ReactNode } from "react";
 import { NavLink, useSearchParams } from "react-router-dom";
 import {
@@ -8,6 +8,7 @@ import {
   ChevronDown,
   Home,
   ListChecks,
+  RefreshCw,
 } from "lucide-react";
 import { AccountMenu } from "../../features/auth/AccountMenu";
 import { useOptionalAuth } from "../../features/auth/AuthContext";
@@ -50,9 +51,20 @@ export function ParentShell({
   childOptions,
 }: ParentShellProps) {
   const auth = useOptionalAuth();
+  const queryClient = useQueryClient();
+  const refreshing = useIsFetching({ queryKey: ["school", "parent"] }) > 0;
+  const [refreshError, setRefreshError] = useState(false);
+  const refresh = async () => {
+    setRefreshError(false);
+    try {
+      await queryClient.invalidateQueries({ queryKey: ["school"], refetchType: "active" }, { throwOnError: true });
+    } catch {
+      setRefreshError(true);
+    }
+  };
   const schoolName = auth?.memberships.find((membership) => membership.role === "guardian")?.school_name ?? "Cambridge International School";
   const [searchParams] = useSearchParams();
-  const selectedStudentId = searchParams.get("student_id");
+  const selectedStudentId = searchParams.get("student_id") ?? child.id;
   const [selectorOpen, setSelectorOpen] = useState(false);
   const studentsQuery = useQuery({
     queryKey: ["school", "accessible-students"],
@@ -65,9 +77,9 @@ export function ParentShell({
     grade: `Grade ${student.current_enrollment.grade}`,
     section: student.current_enrollment.section,
   }));
-  const selectableChildren = childOptions?.length
-    ? childOptions
-    : accessibleChildren?.length ? accessibleChildren : [child];
+  const selectableChildren = accessibleChildren?.length
+    ? accessibleChildren
+    : childOptions?.length ? childOptions : [child];
 
   const chooseChild = async (childId: string) => {
     await onSelectChild?.(childId);
@@ -94,9 +106,11 @@ export function ParentShell({
               type="button"
               aria-expanded={selectorOpen}
               aria-haspopup={selectableChildren.length > 1 ? "listbox" : undefined}
+              disabled={selectableChildren.length < 2 || !onSelectChild}
+              onKeyDown={(event) => { if (event.key === "Escape") setSelectorOpen(false); }}
               onClick={() => selectableChildren.length > 1 && setSelectorOpen((current) => !current)}
             >
-              <span className="presence-dot" />
+              <span className="blue-dot" />
               <span>{child.name} • Class {child.grade.replace("Grade ", "")}{child.section}</span>
               {selectableChildren.length > 1 ? <ChevronDown size={15} /> : null}
             </button>
@@ -115,7 +129,15 @@ export function ParentShell({
         </div>
       </header>
 
-      <main className="parent-main">{children}</main>
+      <main className="parent-main">
+        <div className="parent-sync-bar">
+          <span>{refreshError ? "Couldn’t refresh. Please try again." : "School records"}</span>
+          <button type="button" disabled={refreshing} onClick={() => void refresh()} aria-label="Refresh parent records">
+            <RefreshCw size={14} className={refreshing ? "spin" : undefined} />{refreshing ? "Refreshing…" : "Refresh"}
+          </button>
+        </div>
+        {children}
+      </main>
 
       <nav className="parent-bottom-nav" aria-label="Parent portal navigation">
         {parentRoutes.map((item) => {

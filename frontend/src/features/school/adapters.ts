@@ -119,13 +119,13 @@ function indiaMinutesNow() {
     Number(parts.find((part) => part.type === "minute")?.value ?? 0);
 }
 
-function indiaDateToday() {
+function indiaDateToday(now = new Date()) {
   const parts = new Intl.DateTimeFormat("en-GB", {
     timeZone: "Asia/Kolkata",
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
-  }).formatToParts(new Date());
+  }).formatToParts(now);
   const value = (type: string) => parts.find((part) => part.type === type)?.value ?? "";
   return `${value("year")}-${value("month")}-${value("day")}`;
 }
@@ -209,7 +209,7 @@ export function adaptParentHome(response: ParentHomeResponse): ParentHomeData {
           status: response.campus_presence.direction === "in" ? "In School" : "Checked Out",
           detail: `${response.campus_presence.gate} swipe at ${formatTime(response.campus_presence.occurred_at)}`,
         }
-      : { status: "Not on campus", detail: "No gate event recorded today" },
+      : { status: "Presence not recorded", detail: "No gate event recorded today" },
     pendingLeave: leave
       ? {
           id: leave.id,
@@ -219,7 +219,7 @@ export function adaptParentHome(response: ParentHomeResponse): ParentHomeData {
           durationLabel: `${leave.duration_days} ${leave.duration_days === 1 ? "Day" : "Days"} (${formatLeaveRange(leave)})`,
         }
       : undefined,
-    unreadDiaryCount: response.diary_preview.filter((item) => !item.acknowledged).length,
+    unreadDiaryCount: response.diary_preview.filter((item) => item.requires_acknowledgement && !item.acknowledged).length,
     diarySender: response.diary_preview[0]?.author_name ?? "No new diary entries",
     currentPeriod: focus
       ? {
@@ -250,7 +250,7 @@ export function adaptParentHome(response: ParentHomeResponse): ParentHomeData {
       : undefined,
     metrics: {
       attendance: `${attendance.toFixed(1)}%`,
-      attendanceStatus: attendance >= 85 ? "Safe Zone" : "Needs Attention",
+      attendanceStatus: response.attendance.total === 0 ? "No records yet" : attendance >= (response.semester_metrics.attendance_threshold ?? 85) ? "On track" : "Needs attention",
       threshold: `School minimum: ${response.semester_metrics.attendance_threshold ?? 85}%`,
       periodsToday: response.semester_metrics.periods_today,
       dismissal: schedule.at(-1) ? formatTime(schedule.at(-1)?.ends_at) : "Not scheduled",
@@ -276,6 +276,8 @@ function calendarStatus(record?: ApiAttendanceRecord): AttendanceCalendarStatus 
   if (!record) return "future";
   if (record.status === "absent") return "unexcused";
   if (record.status === "excused") return "excused";
+  if (record.status === "late") return "late";
+  if (record.status === "half_day") return "half_day";
   return "present";
 }
 
@@ -328,6 +330,8 @@ export function adaptParentAttendance(response: ParentAttendanceResponse): Paren
   });
   const attended = summary.present + summary.late + summary.half_day * 0.5;
   const gate = response.latest_gate_event;
+  const todayGate = gate && indiaDateToday(new Date(gate.occurred_at)) === todayIso ? gate : undefined;
+  const checkIn = response.today?.check_in_at ?? (todayGate?.direction === "in" ? todayGate.occurred_at : undefined);
   const homeroomContact = response.contacts?.find((contact) => isHomeroomContact(contact.label));
   return {
     child: classDetails(response.student),
@@ -348,11 +352,12 @@ export function adaptParentAttendance(response: ParentAttendanceResponse): Paren
       pendingDetail: summary.absent ? "Recorded absences" : "None recorded",
     },
     today: {
-      checkInTime: formatTime(response.today?.check_in_at ?? gate?.occurred_at),
-      checkInLocation: gate?.gate ?? "Campus gate",
-      checkInSource: gate?.source ?? "Attendance register",
-      checkInVerified: Boolean(response.today?.check_in_at || gate?.occurred_at),
+      checkInTime: formatTime(checkIn),
+      checkInLocation: todayGate?.direction === "in" ? todayGate.gate : "Attendance register",
+      checkInSource: todayGate?.direction === "in" ? todayGate.source : "School record",
+      checkInVerified: Boolean(checkIn),
       dismissalTime: formatTime(response.today?.check_out_at ?? response.expected_dismissal_at),
+      dismissalRecorded: Boolean(response.today?.check_out_at),
       dismissalDetail: response.today?.check_out_at
         ? "Recorded campus checkout"
         : response.expected_dismissal_at
@@ -374,8 +379,8 @@ export function adaptParentAttendance(response: ParentAttendanceResponse): Paren
         id: item.id,
         name: item.subject.name,
         percent,
-        status: percent >= 98 ? "Optimal" : percent >= 95 ? "Safe" : percent >= threshold + 3 ? "Good" : "Near Min",
-        tone: percent >= 98 ? "excellent" : percent >= 95 ? "safe" : percent >= threshold + 3 ? "good" : "warning",
+        status: percent < threshold ? "Below minimum" : percent >= 98 ? "Optimal" : percent >= 95 ? "Safe" : percent >= threshold + 3 ? "Good" : "Near Min",
+        tone: percent < threshold ? "warning" : percent >= 98 ? "excellent" : percent >= 95 ? "safe" : percent >= threshold + 3 ? "good" : "warning",
       };
     }),
     homeroomContact: homeroomContact
@@ -432,7 +437,7 @@ export function adaptParentDiary(response: ParentDiaryResponse): ParentDiaryData
   const selected = parseLocalDate(response.date);
   const monday = new Date(selected);
   monday.setDate(selected.getDate() - ((selected.getDay() + 6) % 7));
-  const days = Array.from({ length: 6 }, (_, index) => {
+  const days = Array.from({ length: 7 }, (_, index) => {
     const value = new Date(monday);
     value.setDate(monday.getDate() + index);
     const id = `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, "0")}-${String(value.getDate()).padStart(2, "0")}`;
@@ -444,7 +449,7 @@ export function adaptParentDiary(response: ParentDiaryResponse): ParentDiaryData
     };
   });
   const saturday = new Date(monday);
-  saturday.setDate(monday.getDate() + 5);
+  saturday.setDate(monday.getDate() + 6);
   const nowMinutes = indiaMinutesNow();
   const selectedToday = response.date === indiaDateToday();
   const current = selectedToday ? response.schedule.find((slot) => {

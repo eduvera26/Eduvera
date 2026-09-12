@@ -76,6 +76,16 @@ describe("implemented application routes", () => {
     expect(await screen.findByRole("heading", { name: heading })).toBeVisible();
   });
 
+  it("retains the selected child when navigating from parent home", async () => {
+    const visitor = userEvent.setup();
+    render(<MemoryRouter initialEntries={["/parent/home?student_id=child-two"]}><App /></MemoryRouter>);
+    expect(await screen.findByRole("heading", { name: "Aarav Sharma" })).toBeVisible();
+    expect(screen.getByRole("link", { name: "Attendance" })).toHaveAttribute("href", "/parent/attendance?student_id=child-two");
+    await visitor.click(screen.getByRole("link", { name: "Attendance" }));
+    expect(await screen.findByRole("heading", { name: "Today's Presence Pulse" })).toBeVisible();
+    expect(apiFetchMock).toHaveBeenCalledWith("/api/v1/screens/parent/attendance/?student_id=child-two");
+  });
+
   it("renders the parent timetable alias", async () => {
     render(<MemoryRouter initialEntries={["/parent/timetable"]}><App /></MemoryRouter>);
     expect(await screen.findByRole("heading", { name: "Class 7A Timetable" })).toBeVisible();

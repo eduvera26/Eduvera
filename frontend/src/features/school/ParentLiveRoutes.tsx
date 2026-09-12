@@ -60,6 +60,7 @@ function contactAction(contact?: { name: string; email?: string | null; phone?: 
 export function ParentHomeRoute() {
   const { studentId, selectStudent } = useSelectedStudent();
   const query = useQuery({
+    refetchOnWindowFocus: true,
     queryKey: ["school", "parent", "home", studentId ?? "default"],
     queryFn: () => getParentHome(studentId),
   });
@@ -81,6 +82,7 @@ export function ParentAttendanceRoute() {
   const { studentId, selectStudent } = useSelectedStudent();
   const navigate = useNavigate();
   const query = useQuery({
+    refetchOnWindowFocus: true,
     queryKey: ["school", "parent", "attendance", studentId ?? "default"],
     queryFn: () => getParentAttendance(studentId),
   });
@@ -103,6 +105,7 @@ export function ParentLeaveRoute() {
   const leaveId = searchParams.get("leave_id") ?? undefined;
   const refresh = useRefreshSchoolData();
   const query = useQuery({
+    refetchOnWindowFocus: true,
     queryKey: ["school", "parent", "leave", studentId ?? "default", leaveId ?? "pending"],
     queryFn: () => getParentLeave(leaveId, studentId),
   });
@@ -116,7 +119,7 @@ export function ParentLeaveRoute() {
       ends_on: draft.toDate,
       reason: draft.reason,
       file: draft.attachment,
-      student_id: studentId,
+      student_id: response.student.id,
     });
     await refresh();
   };
@@ -153,6 +156,7 @@ export function ParentDiaryRoute() {
   const [selectedDate, setSelectedDate] = useState<string>();
   const refresh = useRefreshSchoolData();
   const query = useQuery({
+    refetchOnWindowFocus: true,
     queryKey: ["school", "parent", "diary", studentId ?? "default", selectedDate ?? "today"],
     queryFn: () => getParentDiary(selectedDate, studentId),
   });
@@ -187,6 +191,7 @@ export function ParentDiaryRoute() {
 export function ParentTimetableRoute() {
   const { studentId, selectStudent } = useSelectedStudent();
   const query = useQuery({
+    refetchOnWindowFocus: true,
     queryKey: ["school", "parent", "timetable", studentId ?? "default"],
     queryFn: () => getParentTimetable(undefined, studentId),
   });

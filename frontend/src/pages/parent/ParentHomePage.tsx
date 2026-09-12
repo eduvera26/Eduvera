@@ -3,7 +3,6 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   ArrowLeftRight,
   BookOpen,
-  Bus,
   CalendarDays,
   CheckCircle2,
   ChevronRight,
@@ -61,7 +60,7 @@ function StudentAvatar({ child }: { child: ParentChildSummary }) {
       ) : (
         <span className="student-avatar student-avatar--fallback" aria-hidden="true">{initials}</span>
       )}
-      <span className="student-avatar__presence" />
+
     </div>
   );
 }
@@ -73,7 +72,7 @@ export function ParentHomePage({
 }: ParentHomePageProps) {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const selectedStudentId = searchParams.get("student_id");
+  const selectedStudentId = searchParams.get("student_id") ?? data.child.id;
   const parentPath = (path: string) =>
     selectedStudentId ? `${path}${path.includes("?") ? "&" : "?"}student_id=${encodeURIComponent(selectedStudentId)}` : path;
   const pendingLeave = data.pendingLeave;
@@ -94,7 +93,6 @@ export function ParentHomePage({
       pageLabel="Home"
       child={data.child}
       onSelectChild={onSelectChild}
-      childOptions={data.sibling ? [data.child, data.sibling] : [data.child]}
     >
       <div className="parent-stack home-page">
         <section className="surface-card child-status-card" aria-labelledby="child-name">
@@ -114,12 +112,12 @@ export function ParentHomePage({
               </button>
             ) : null}
           </div>
-          <div className="presence-banner">
+          <div className={`presence-banner${data.presence.status === "In School" ? " is-present" : " is-neutral"}`}>
             <span className="live-indicator"><span /></span>
             <strong>{data.presence.status}</strong>
             <span className="dot-divider">•</span>
             <span>{data.presence.detail}</span>
-            <ShieldCheck size={17} />
+            {data.presence.status === "In School" ? <ShieldCheck size={17} /> : null}
           </div>
         </section>
 
@@ -157,14 +155,14 @@ export function ParentHomePage({
           </article>
           <button className="surface-card diary-unread-card" type="button" onClick={() => navigate(parentPath("/parent/diary"))}>
             <span className="action-icon"><BookOpen size={19} /></span>
-            <span><strong>{data.unreadDiaryCount > 0 ? `${data.unreadDiaryCount} Unread Diary Note${data.unreadDiaryCount === 1 ? "" : "s"}` : "No unread diary notes"}</strong><small>{data.unreadDiaryCount > 0 ? `From ${data.diarySender}` : data.diarySender}</small></span>
+            <span><strong>{data.unreadDiaryCount > 0 ? `${data.unreadDiaryCount} Diary Sign-off${data.unreadDiaryCount === 1 ? "" : "s"}` : "No diary sign-offs pending"}</strong><small>{data.unreadDiaryCount > 0 ? `From ${data.diarySender}` : data.diarySender}</small></span>
             <ChevronRight size={20} />
           </button>
         </section>
 
         <section className="surface-card pulse-card" aria-labelledby="pulse-heading">
           <div className="card-heading-row">
-            <h2 id="pulse-heading"><Clock3 size={20} />Academic Pulse</h2>
+            <h2 id="pulse-heading"><Clock3 size={20} />Today’s classes</h2>
             <span className={data.presence.status === "In School" ? "status-pill status-pill--success" : "status-pill"}><CheckCircle2 size={14} />{data.presence.status}</span>
           </div>
           {currentPeriod ? <div className="current-period">
@@ -181,6 +179,7 @@ export function ParentHomePage({
               <span style={{ width: `${currentPeriod.progressPercent}%` }} />
             </div>
           </div> : <div className="completed-message completed-message--neutral"><CalendarDays size={22} /><div><strong>No classes scheduled today</strong><span>The timetable has no periods for this date.</span></div></div>}
+          <button className="parent-text-action" type="button" onClick={() => navigate(parentPath("/parent/timetable"))}>View full timetable <ChevronRight size={16} /></button>
           {data.nextPeriod ? <div className="next-period">
             <ChevronRight size={17} />
             <span>Next: <strong>Period {data.nextPeriod.number} • {data.nextPeriod.subject}</strong> ({data.nextPeriod.room})</span>
@@ -190,12 +189,12 @@ export function ParentHomePage({
 
         <section aria-labelledby="metrics-heading">
           <div className="section-eyebrow-row">
-            <h2 id="metrics-heading">Semester Metrics</h2>
+            <h2 id="metrics-heading">At a glance</h2>
             <span className="section-link-label">{data.metrics.termLabel}</span>
           </div>
           <div className="metric-grid">
             <MetricCard label="Attendance" icon={<PieChart size={19} />} value={data.metrics.attendance}>
-              <span className="mini-pill mini-pill--success">{data.metrics.attendanceStatus}</span><span>{data.metrics.threshold}</span>
+              <span className={`mini-pill${data.metrics.attendanceStatus === "On track" ? " mini-pill--success" : ""}`}>{data.metrics.attendanceStatus}</span><span>{data.metrics.threshold}</span>
             </MetricCard>
             <MetricCard label="Schedule" icon={<CalendarDays size={19} />} value={`${data.metrics.periodsToday} Periods`}>
               <span>Dismissal:</span><strong className="blue-text">{data.metrics.dismissal}</strong>
@@ -203,14 +202,14 @@ export function ParentHomePage({
             <MetricCard label="Homework" icon={<ClipboardList size={19} />} value={`${data.metrics.homeworkTasks} Tasks`}>
               <span className="blue-dot" /><span>{data.metrics.homeworkDetail}</span>
             </MetricCard>
-            <MetricCard label="Dues Status" icon={<CheckCircle2 size={19} />} value={data.metrics.duesStatus} tone="positive">
+            <MetricCard label="Dues Status" icon={<CheckCircle2 size={19} />} value={data.metrics.duesStatus}>
               <span>{data.metrics.duesDetail}</span>
             </MetricCard>
           </div>
         </section>
 
         <section aria-labelledby="shortcuts-heading">
-          <div className="section-eyebrow-row"><h2 id="shortcuts-heading">Shortcuts & Desk</h2></div>
+          <div className="section-eyebrow-row"><h2 id="shortcuts-heading">Quick actions</h2></div>
           <div className="surface-card shortcut-list">
             <button type="button" disabled={!onContactTeacher} aria-disabled={!onContactTeacher} onClick={() => void onContactTeacher?.()}>
               <span className="shortcut-icon"><Phone size={19} /></span>
@@ -222,10 +221,7 @@ export function ParentHomePage({
               <span><strong>Submit Future Leave Application</strong><small>Medical, family, or personal leave</small></span>
               <ChevronRight size={21} />
             </button>
-            <button type="button" disabled aria-disabled="true" title="Transport self-service is planned for a later School OS module" aria-label={`${data.transport.passLabel}. ${data.transport.pickupWindow}. View only.`}>
-              <span className="shortcut-icon"><Bus size={19} /></span>
-              <span><strong>{data.transport.passLabel}</strong><small className="green-text">{data.transport.pickupWindow} • View only</small></span>
-            </button>
+
           </div>
         </section>
       </div>

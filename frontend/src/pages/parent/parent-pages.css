@@ -575,7 +575,7 @@
 .diary-date-section__heading h1 { margin: 1px 0 0; font-size: 18px; line-height: 24px; letter-spacing: -.03em; }
 .diary-date-section__calendar { display: grid !important; width: 38px; height: 38px; flex: 0 0 auto; place-items: center; border-radius: 999px; color: var(--parent-primary) !important; background: var(--parent-soft-2); }
 .packing-heading small { color: var(--parent-muted); font-size: 8px; font-weight: 500; }
-.diary-day-strip { display: grid; grid-template-columns: repeat(6, minmax(0,1fr)); gap: 5px; margin-top: 10px; }
+.diary-day-strip { display: grid; grid-template-columns: repeat(7, minmax(0,1fr)); gap: 5px; margin-top: 10px; }
 .diary-day-strip button { position: relative; height: 51px; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 0; border-radius: 11px; color: #40506a; background: #eff4ff; cursor: pointer; }
 .diary-day-strip button span { font-size: 9px; }
 .diary-day-strip button strong { font-size: 14px; }
@@ -723,4 +723,49 @@
 
 @media (prefers-reduced-motion: reduce) {
   .parent-app *, .parent-app *::before, .parent-app *::after { scroll-behavior: auto !important; animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
+
+/* Parent portal: shared student palette, readable mobile cards and touch targets. */
+.parent-header { height: auto; min-height: 116px; }
+.parent-main { padding-top: calc(130px + max(0px, env(safe-area-inset-top) - 12px)); padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
+.parent-header__actions { flex-shrink: 0; }
+.parent-brand { min-width: 0; padding-right: 10px; }
+.parent-brand__name { font-size: 14px; line-height: 19px; }
+.parent-stack { gap: 20px; }
+.parent-app .surface-card { border-radius: 18px; }
+.parent-sync-bar { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: -5px 0 12px; color: var(--parent-muted); font-size: 11px; line-height: 16px; }
+.parent-sync-bar button, .parent-text-action { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; flex-shrink: 0; color: var(--parent-primary); background: transparent; font-size: 12px; font-weight: 700; }
+.parent-text-action { margin-top: 6px; }
+.child-switcher { min-height: 44px; }
+.child-switcher:disabled { opacity: 1; cursor: default; }
+.child-menu button { min-height: 48px; }
+.parent-app .child-status-card { background: linear-gradient(125deg, #164ed0, #2969e7); color: #fff; border: 0; box-shadow: 0 8px 22px rgba(29,78,216,.16); }
+.child-status-card .title-row { flex-wrap: wrap; }
+.child-status-card h1 { font-size: 22px; line-height: 28px; }
+.child-status-card__text p { color: #e1ebff; font-size: 12px; }
+.child-status-card .quiet-pill { color: #fff; background: rgba(255,255,255,.15); font-size: 10px; }
+.child-status-card .student-avatar { border-radius: 17px; border: 3px solid rgba(255,255,255,.6); }
+.child-status-card .presence-banner { flex-wrap: wrap; gap: 5px 8px; background: #fff; }
+.presence-banner.is-neutral strong { color: var(--parent-ink-soft); }
+.presence-banner.is-neutral .live-indicator { display: none; }
+.child-status-card .presence-banner > span:not(.live-indicator):not(.dot-divider) { white-space: normal; font-size: 12px; }
+.child-status-card .sibling-button { grid-column: 2 / -1; justify-self: start; background: #fff; }
+.parent-nav-item.is-active { background: var(--parent-soft-2); border-radius: 14px; }
+.parent-bottom-nav { gap: 3px; }
+.calendar-day--late { color: #784a00; background: #fff1ce; }
+.calendar-day--half_day { color: #0037b0; background: #dce9ff; }
+.parent-app .teacher-note p { font-size: 14px; line-height: 23px; }
+.parent-app .teacher-note__meta, .parent-app .note-success { font-size: 11px; line-height: 17px; }
+.parent-app .parent-note-card textarea { font-size: 16px; line-height: 24px; }
+.parent-app .parent-note-card__actions .button, .parent-app .diary-schedule-section button { min-height: 44px; }
+.parent-app .packing-list label { min-height: 44px; }
+.parent-app .signature-box p { font-size: 13px; line-height: 21px; }
+@media (max-width: 390px) {
+  .child-status-card__identity { grid-template-columns: auto minmax(0, 1fr); gap: 10px; }
+  .child-status-card h1 { font-size: 20px; }
+  .parent-header__page { font-size: 11px; }
+  .child-switcher { max-width: 235px; }
+  .parent-app .button-row { flex-wrap: wrap; }
+  .parent-app .button-row .button { flex: 1 1 130px; }
+  .parent-app .current-period__meta { flex-wrap: wrap; }
 }
