@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MemoryRouter } from "react-router-dom";
+import { Link, MemoryRouter } from "react-router-dom";
 import { App } from "./App";
 import { schoolApiFixture } from "./test/schoolApiFixtures";
 
@@ -170,10 +170,45 @@ describe("implemented application routes", () => {
     await waitFor(() => expect(toggle).toBeEnabled());
     await interact.click(toggle);
     expect(screen.queryByRole("dialog", { name: "Select child profile" })).not.toBeInTheDocument();
+    await waitFor(() => expect(document.querySelector(".parent-id-stack.is-animating")).toBeInTheDocument());
+    expect(document.querySelector(".parent-id-stack__active")).toHaveTextContent("Aarav Sharma");
+    expect(document.querySelector(".parent-id-stack__incoming")).toHaveTextContent("Ananya Sharma");
     expect(await screen.findByRole("button", { name: /Open digital student ID for Ananya Sharma/ })).toBeVisible();
     await waitFor(() => expect(toggle).toBeEnabled());
+    expect(screen.queryByText("Syncing school records…")).not.toBeInTheDocument();
     await interact.click(toggle);
+    await waitFor(() => expect(document.querySelector(".parent-id-stack.is-animating")).toBeInTheDocument());
+    expect(document.querySelector(".parent-id-stack__active")).toHaveTextContent("Ananya Sharma");
+    expect(document.querySelector(".parent-id-stack__incoming")).toHaveTextContent("Aarav Sharma");
     expect(await screen.findByRole("button", { name: /Open digital student ID for Aarav Sharma/ })).toBeVisible();
+    expect(screen.queryByText("Syncing school records…")).not.toBeInTheDocument();
+  }, 12000);
+
+  it("keeps the parent dashboard visible when the selected child's record is still loading", async () => {
+    const interact = userEvent.setup();
+    const original = apiFetchMock.getMockImplementation() as (path: string) => Promise<unknown>;
+    const first = (schoolApiFixture("/api/v1/students/") as { results: Array<{ id: string; user: { display_name: string }; admission_number: string }> }).results[0]!;
+    const second = { ...first, id: "student-2", admission_number: "CIS-002", user: { ...first.user, display_name: "Ananya Sharma" } };
+    let secondFetchRequested = false;
+    let finishSecondFetch: (response: unknown) => void = () => {};
+    apiFetchMock.mockImplementation((path: string) => {
+      if (path === "/api/v1/students/") return Promise.resolve({ results: [first, second] });
+      if (path.startsWith("/api/v1/screens/parent/home/")) {
+        const selected = path.includes("student-2") ? second : first;
+        const response = { ...(schoolApiFixture(path) as object), student: selected, siblings: [selected === first ? second : first] };
+        if (selected === second) return new Promise((resolve) => { secondFetchRequested = true; finishSecondFetch = resolve; });
+        return Promise.resolve(response);
+      }
+      return original(path);
+    });
+    render(<MemoryRouter initialEntries={["/parent/home"]}><App /><Link to="/parent/home?student_id=student-2">Select next child</Link></MemoryRouter>);
+    expect(await screen.findByRole("button", { name: /Open digital student ID for Aarav Sharma/ })).toBeVisible();
+    await interact.click(screen.getByRole("link", { name: "Select next child" }));
+    await waitFor(() => expect(secondFetchRequested).toBe(true));
+    expect(screen.queryByText("Syncing school records…")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Open digital student ID for Aarav Sharma/ })).toBeVisible();
+    finishSecondFetch({ ...(schoolApiFixture("/api/v1/screens/parent/home/?student_id=student-2") as object), student: second, siblings: [first] });
+    expect(await screen.findByRole("button", { name: /Open digital student ID for Ananya Sharma/ })).toBeVisible();
   }, 12000);
 
   it("cycles a four-child card deck in both directions, including wraparound", async () => {

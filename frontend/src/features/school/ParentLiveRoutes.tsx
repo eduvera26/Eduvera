@@ -1,4 +1,4 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { ParentAttendancePage } from "../../pages/parent/ParentAttendancePage";
@@ -64,6 +64,7 @@ export function ParentHomeRoute() {
     queryKey: ["school", "parent", "home", studentId ?? "default"],
     queryFn: () => getParentHome(studentId),
     staleTime: 30_000,
+    placeholderData: keepPreviousData,
   });
   if (query.isPending) return <ScreenLoading />;
   if (query.isError || !query.data) return <LiveRouteError error={query.error} onRetry={query.refetch} />;
