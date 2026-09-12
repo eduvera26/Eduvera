@@ -1,0 +1,104 @@
+name: Stage
+
+on:
+  push:
+    branches: [Stage]
+  workflow_dispatch:
+
+concurrency:
+  group: stage
+  cancel-in-progress: false
+
+jobs:
+  # Runs on GitHub: everything must typecheck, lint, build and pass tests
+  # against a throwaway Postgres before anything reaches the stage host.
+  verify:
+    name: Verify
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: omnischool
+          POSTGRES_PASSWORD: omnischool
+          POSTGRES_DB: omnischool
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U omnischool"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://omnischool:omnischool@127.0.0.1:5432/omnischool
+      COOKIE_SECRET: ci-only-cookie-secret-that-is-long-enough-0123456789
+      DEMO_MODE: "true"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: "**/package-lock.json"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Backend · install, typecheck, lint, build
+        working-directory: backend
+        run: |
+          npm ci
+          npm run typecheck
+          npm run lint
+          npm run build
+
+      - name: Backend · migrate and seed the test database
+        working-directory: backend
+        run: |
+          npm run db:migrate
+          python3 scripts/generate_school_data.py
+          node --import tsx src/database/seed.ts
+
+      - name: Backend · integration tests
+        working-directory: backend
+        run: npx vitest run
+
+      - name: Mobile app · install, typecheck, build, test
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run typecheck
+          npm run build
+          npm test
+
+      - name: Desktop dashboard · install, typecheck, build
+        working-directory: frontend-desktop
+        run: |
+          npm ci
+          npm run typecheck
+          npm run build
+
+  # Runs on the self-hosted Windows runner (label: stage). Secrets stay on the
+  # host in %USERPROFILE%\.omnischool\stage.env; the workflow never sees them.
+  deploy:
+    name: Deploy to stage host
+    needs: verify
+    runs-on: [self-hosted, windows, stage]
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install and build all three
+        shell: powershell
+        run: |
+          foreach ($dir in 'backend', 'frontend', 'frontend-desktop') {
+            Push-Location $dir
+            npm ci --no-audit --no-fund
+            if ($LASTEXITCODE -ne 0) { throw "npm ci failed in $dir" }
+            npm run build
+            if ($LASTEXITCODE -ne 0) { throw "build failed in $dir" }
+            Pop-Location
+          }
+
+      - name: Migrate, tunnel, restart, health-check
+        shell: powershell
+        run: .\deploy\stage.ps1

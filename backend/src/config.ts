@@ -19,6 +19,8 @@ const schema = z.object({
   ALLOWED_ORIGINS: z.string().default("http://127.0.0.1:8000,http://localhost:8000"),
   DEMO_MODE: booleanString("false"),
   SPA_DIST_DIR: z.string().default("../frontend/dist"),
+  STAFF_DIST_DIR: z.string().default("../frontend-desktop/dist"),
+  PUBLIC_URL: z.string().optional(),
   UPLOAD_DIR: z.string().default("./storage/leave-documents"),
   AI_PROVIDER: z.enum(["mock", "ollama", "openai-compatible"]).default("mock"),
   OLLAMA_BASE_URL: z.string().url().default("http://127.0.0.1:11434"),
@@ -44,6 +46,7 @@ export function loadConfig() {
     rateLimitStore: value.RATE_LIMIT_STORE ?? (value.NODE_ENV === "production" ? "postgres" : "memory"),
     allowedOrigins: value.ALLOWED_ORIGINS.split(",").map((origin) => origin.trim()).filter(Boolean),
     spaDistDir: resolve(process.cwd(), value.SPA_DIST_DIR),
+    staffDistDir: resolve(process.cwd(), value.STAFF_DIST_DIR),
     uploadDir: resolve(process.cwd(), value.UPLOAD_DIR),
   };
 }
