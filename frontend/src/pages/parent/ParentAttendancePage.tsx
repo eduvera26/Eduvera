@@ -90,7 +90,7 @@ export function ParentAttendancePage({
           <div className="aggregate-card__top">
             <div>
               <button type="button" id="aggregate-heading" className="attendance-ranking-trigger" onClick={() => setRankingOpen(true)}>Overall Aggregate <span aria-hidden="true">↗</span></button>
-              <div className="aggregate-card__score">
+              <button type="button" className="aggregate-card__score aggregate-card__score--open" aria-label="View all class attendance from the attendance score" onClick={() => setRankingOpen(true)}>
                 <strong>{data.aggregatePercent.toFixed(1)}%</strong>
                 {data.trendPercent === undefined ? <span>Live term</span> : (
                   <span>
@@ -98,7 +98,7 @@ export function ParentAttendancePage({
                     {data.trendPercent > 0 ? "+" : ""}{data.trendPercent.toFixed(1)}%
                   </span>
                 )}
-              </div>
+              </button>
             </div>
             <span className="aggregate-card__seal"><BadgeCheck size={27} /></span>
           </div>

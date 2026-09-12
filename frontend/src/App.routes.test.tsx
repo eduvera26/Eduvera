@@ -161,6 +161,17 @@ describe("implemented application routes", () => {
     expect(within(dialog).getByRole("list", { name: "All class attendance" })).toBeVisible();
   });
 
+  it("opens all class attendance by tapping the score in the parent Attendance tab", async () => {
+    const interact = userEvent.setup();
+    render(<MemoryRouter initialEntries={["/parent/attendance"]}><App /></MemoryRouter>);
+    const score = await screen.findByRole("button", { name: "View all class attendance from the attendance score" });
+    expect(score).toHaveTextContent("95.0%");
+    await interact.click(score);
+    const dialog = screen.getByRole("dialog", { name: /standings/ });
+    expect(within(dialog).getAllByRole("listitem")).toHaveLength(4);
+    expect(within(dialog).getByRole("listitem", { name: /Your child, Aarav Sharma/ })).toHaveClass("attendance-ranking__row--current");
+  });
+
   it("shows live attendance rank and trends alongside pending and historical homework", async () => {
     render(<MemoryRouter initialEntries={["/parent/home"]}><App /></MemoryRouter>);
     const attendance = within((await screen.findByRole("button", { name: "View all class attendance" })).closest("article")!);
