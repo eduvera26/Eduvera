@@ -280,6 +280,7 @@ export function adaptParentHome(response: ParentHomeResponse): ParentHomeData {
           startsAt: formatTime(next.starts_at),
         }
       : undefined,
+    homeworkItems: response.homework_items?.map((item) => ({ id: item.id, title: item.title, body: item.body, subject: item.subject_name, dueAt: item.due_at, completedAt: item.completed_at })),
     metrics: {
       attendance: `${attendance.toFixed(1)}%`,
       attendanceStatus: attendance >= 85 ? "Safe Zone" : "Needs Attention",

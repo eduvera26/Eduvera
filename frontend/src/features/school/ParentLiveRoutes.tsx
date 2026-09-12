@@ -16,6 +16,7 @@ import {
   getParentLeave,
   getParentTimetable,
   performLeaveAction,
+  setHomeworkCompleted,
 } from "./api";
 import {
   adaptParentAttendance,
@@ -81,6 +82,10 @@ export function ParentHomeRoute() {
         staleTime: 30_000,
       }).then(adaptParentHome)}
       onContactTeacher={contactAction(teacher)}
+      onToggleHomework={async (itemId, completed) => {
+        await setHomeworkCompleted(itemId, data.child.id, completed);
+        await queryClient.invalidateQueries({ queryKey: ["school", "parent", "home", studentId ?? "default"] });
+      }}
     />
   );
 }

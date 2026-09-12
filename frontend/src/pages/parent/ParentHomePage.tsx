@@ -22,6 +22,7 @@ import { useOptionalAuth } from "../../features/auth/AuthContext";
 import { getAccessibleStudents } from "../../features/school/api";
 import { StudentIdentityCard } from "../student/StudentIdentityCard";
 import { AttendanceRankingDialog } from "../../features/school/AttendanceRankingDialog";
+import { HomeworkDetailsDialog } from "../../features/school/HomeworkDetailsDialog";
 import { ParentShell } from "./ParentShell";
 import type { ParentHomeData, ParentPageAction } from "./parentTypes";
 import "./parent-pages.css";
@@ -31,6 +32,7 @@ export interface ParentHomePageProps {
   onSelectChild?: (childId: string) => ParentPageAction;
   onPrepareChild?: (childId: string) => Promise<ParentHomeData>;
   onContactTeacher?: () => ParentPageAction;
+  onToggleHomework?: (itemId: string, completed: boolean) => Promise<void>;
 }
 type CardDirection = "left" | "right";
 type CardTransition = { phase: "preparing" | "animating" | "completed"; targetId: string; direction: CardDirection; incoming?: ParentHomeData };
@@ -42,7 +44,7 @@ function MetricCard({
   tone,
   insight,
   valueAccessory,
-  onTitleClick,
+  onOpen,
 }: {
   label: string;
   icon: ReactNode;
@@ -51,12 +53,12 @@ function MetricCard({
   tone?: "positive";
   insight?: ReactNode;
   valueAccessory?: ReactNode;
-  onTitleClick?: () => void;
+  onOpen?: () => void;
 }) {
   return (
     <article className="metric-card">
       <div className="metric-card__header">
-        {onTitleClick ? <button type="button" className="metric-card__title-button" onClick={onTitleClick} aria-label={`View all class ${label.toLowerCase()}`}>{label} <span aria-hidden="true">↗</span></button> : <span>{label}</span>}
+        <span>{label}{onOpen ? <span className="metric-card__open-indicator" aria-hidden="true"> ↗</span> : null}</span>
         {icon}
       </div>
       <div className="metric-card__value-row">
@@ -65,6 +67,7 @@ function MetricCard({
       </div>
       <div className="metric-card__detail">{children}</div>
       {insight ? <div className="metric-card__insight">{insight}</div> : null}
+      {onOpen && <button type="button" className="metric-card__hit-area" onClick={onOpen} aria-label={label === "Attendance" ? "View all class attendance" : "View homework details"} />}
     </article>
   );
 }
@@ -81,6 +84,7 @@ export function ParentHomePage({
   onSelectChild,
   onPrepareChild,
   onContactTeacher,
+  onToggleHomework,
 }: ParentHomePageProps) {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -88,6 +92,7 @@ export function ParentHomePage({
   const [transition, setTransition] = useState<CardTransition | null>(null);
   const [switchError, setSwitchError] = useState("");
   const [rankingOpen, setRankingOpen] = useState(false);
+  const [homeworkOpen, setHomeworkOpen] = useState(false);
   const switchTimer = useRef<number | null>(null);
   const mounted = useRef(true);
   useEffect(() => {
@@ -250,7 +255,7 @@ export function ParentHomePage({
             <span className="section-link-label">{data.metrics.termLabel}</span>
           </div>
           <div className="metric-grid">
-            <MetricCard label="Attendance" icon={<PieChart size={19} />} value={data.metrics.attendance} onTitleClick={() => setRankingOpen(true)}
+            <MetricCard label="Attendance" icon={<PieChart size={19} />} value={data.metrics.attendance} onOpen={() => setRankingOpen(true)}
               valueAccessory={<MetricTrend value={data.metrics.attendanceTrend} label="vs prior recorded days" compact />} insight={<>
               <span className="metric-card__rank">{data.metrics.attendanceTrend == null ? "Not enough attendance history" : "vs prior recorded days"}</span>
               <span className="metric-card__rank">{data.metrics.attendanceRank ? `Class rank #${data.metrics.attendanceRank}${data.metrics.attendanceCohortSize ? ` of ${data.metrics.attendanceCohortSize}` : ""}` : "Class rank not published"}</span>
@@ -260,7 +265,7 @@ export function ParentHomePage({
             <MetricCard label="Schedule" icon={<CalendarDays size={19} />} value={`${data.metrics.periodsToday} Periods`}>
               <span>Dismissal:</span><strong className="blue-text">{data.metrics.dismissal}</strong>
             </MetricCard>
-            <MetricCard label="Homework" icon={<ClipboardList size={19} />} value={data.metrics.homeworkTotal === undefined ? `${data.metrics.homeworkTasks} Pending` : `${data.metrics.homeworkTasks}/${data.metrics.homeworkTotal}`}
+            <MetricCard label="Homework" icon={<ClipboardList size={19} />} value={data.metrics.homeworkTotal === undefined ? `${data.metrics.homeworkTasks} Pending` : `${data.metrics.homeworkTasks}/${data.metrics.homeworkTotal}`} onOpen={() => setHomeworkOpen(true)}
               valueAccessory={<MetricTrend value={homeworkTrend} suffix={homeworkPrevious === 0 && (homeworkRecent ?? 0) > 0 ? " new" : "%"} label="last 30d vs prior 30d" higherIsBetter={false} compact />} insight={<>
               <span className="metric-card__rank">{data.metrics.homeworkTotal === undefined ? "Term history unavailable" : `${data.metrics.homeworkTotal} assigned this term`}</span>
               <span className="metric-card__rank">{homeworkTrend == null ? "Not enough homework history" : "last 30d vs prior 30d"}</span>
@@ -272,6 +277,7 @@ export function ParentHomePage({
             </MetricCard>
           </div>
           {rankingOpen && <AttendanceRankingDialog ranking={data.ranking} className={data.idCard.className} currentLabel="Your child" onClose={() => setRankingOpen(false)} />}
+          {homeworkOpen && <HomeworkDetailsDialog items={data.homeworkItems} total={data.metrics.homeworkTotal} onToggle={onToggleHomework} onClose={() => setHomeworkOpen(false)} />}
         </section>
 
         <section aria-labelledby="shortcuts-heading">

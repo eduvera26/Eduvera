@@ -719,6 +719,25 @@ export class SchoolService {
     return { data: { id: created.id, acknowledged_by_name: `${user.first_name} ${user.last_name}`.trim(), acknowledged_at: created.acknowledged_at }, created: true };
   }
 
+  async setHomeworkCompleted(user: AuthUser, itemId: string, studentId: string | undefined, completed: boolean) {
+    const student = await this.studentForUser(user, studentId);
+    const self = student.user_id === user.id;
+    const guardian = await this.guardianRelationship(this.db, user.id, student.id);
+    if (!self && !guardian) throw new ForbiddenException("Only the student or a linked guardian may update homework.");
+    const enrollment = await this.enrollment(student.id);
+    const item = await this.db.selectFrom("diary_items").select("id").where("id", "=", itemId)
+      .where("class_section_id", "=", enrollment.class_section_id).where("term_id", "=", enrollment.term_id)
+      .where("item_type", "=", "homework").where("published_at", "<=", new Date()).executeTakeFirst();
+    if (!item) throw new NotFoundException("Homework not found.");
+    if (completed) {
+      await this.db.insertInto("homework_completions").values({ item_id: itemId, student_id: student.id, completed_by: user.id })
+        .onConflict((conflict) => conflict.columns(["item_id", "student_id"]).doNothing()).execute();
+    } else {
+      await this.db.deleteFrom("homework_completions").where("item_id", "=", itemId).where("student_id", "=", student.id).execute();
+    }
+    return { item_id: itemId, student_id: student.id, completed };
+  }
+
   async addDiaryNote(user: AuthUser, itemId: string, studentId: string | undefined, bodyValue: unknown) {
     const body = z.string().trim().min(2).max(2000).parse(bodyValue);
     const student = await this.studentForUser(user, studentId);
@@ -748,7 +767,7 @@ export class SchoolService {
   async parentHome(user: AuthUser, studentId?: string) {
     const student = await this.studentForUser(user, studentId);
     const [, enrollment] = await Promise.all([this.requireRole(user, student, "guardian"), this.enrollment(student.id)]);
-    const [summary, campus, schedule, diary, contacts, siblings, unread, pending, homework, recentAttendance, ranking] = await Promise.all([
+    const [summary, campus, schedule, diary, contacts, siblings, unread, pending, homework, recentAttendance, ranking, homeworkItems] = await Promise.all([
       this.attendanceSummary(student.id, enrollment),
       this.latestGate(student.id, today()),
       this.timetable(enrollment, isoWeekday(today())),
@@ -758,8 +777,6 @@ export class SchoolService {
       this.db.selectFrom("notifications").select(sql<string>`count(*)::text`.as("count")).where("recipient_id", "=", user.id).where("read_at", "is", null).executeTakeFirst(),
       this.db.selectFrom("leave_requests").select("id").where("student_id", "=", student.id).where("status", "=", "pending_guardian").orderBy("created_at", "desc").executeTakeFirst(),
       this.db.selectFrom("diary_items").select([
-        sql<string>`count(*)::text`.as("total"),
-        sql<string>`count(*) FILTER (WHERE due_at >= now())::text`.as("due"),
         sql<string>`count(*) FILTER (WHERE published_at >= now() - interval '30 days')::text`.as("recent"),
         sql<string>`count(*) FILTER (WHERE published_at >= now() - interval '60 days' AND published_at < now() - interval '30 days')::text`.as("previous"),
       ])
@@ -770,6 +787,13 @@ export class SchoolService {
         .where("date", "<=", enrollment.ends_on).where("date", "<=", today())
         .orderBy("date", "desc").limit(20).execute(),
       this.classAttendanceRanking(student.id, enrollment),
+      this.db.selectFrom("diary_items as item")
+        .leftJoin("homework_completions as completion", (join) => join.onRef("completion.item_id", "=", "item.id").on("completion.student_id", "=", student.id))
+        .leftJoin("subjects as subject", "subject.id", "item.subject_id")
+        .select(["item.id", "item.title", "item.body", "item.due_at", "item.published_at", "subject.name as subject_name", "completion.completed_at"])
+        .where("item.class_section_id", "=", enrollment.class_section_id).where("item.term_id", "=", enrollment.term_id)
+        .where("item.item_type", "=", "homework").where("item.published_at", "<=", new Date())
+        .orderBy("item.published_at", "desc").execute(),
     ]);
     const sampleSize = Math.min(10, Math.floor(recentAttendance.length / 2));
     const attendanceScore = (statuses: typeof recentAttendance) => statuses.reduce((score, item) =>
@@ -786,6 +810,7 @@ export class SchoolService {
       ranking,
       action_required: actionRequired,
       today_schedule: schedule, diary_preview: diary.slice(0, 3), unread_notifications: Number(unread?.count ?? 0),
+      homework_items: homeworkItems,
       semester_metrics: {
         attendance_percentage: summary.percentage,
         attendance_threshold: Number(enrollment.attendance_threshold),
@@ -793,8 +818,8 @@ export class SchoolService {
         attendance_rank: ranking.published ? ranking.current_rank : null,
         attendance_cohort_size: ranking.published ? ranking.cohort_size : null,
         periods_today: schedule.length,
-        homework_due: Number(homework?.due ?? 0),
-        homework_total: Number(homework?.total ?? 0),
+        homework_due: homeworkItems.filter((item) => !item.completed_at).length,
+        homework_total: homeworkItems.length,
         homework_recent: recentHomework,
         homework_previous: previousHomework,
         dues_status: "All Cleared",

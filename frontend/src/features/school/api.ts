@@ -148,6 +148,7 @@ export interface ParentHomeResponse {
   today_schedule: ApiTimetableSlot[];
   diary_preview: ApiDiaryItem[];
   unread_notifications: number;
+  homework_items?: Array<{ id: string; title: string; body: string; subject_name: string | null; due_at: string | null; published_at: string; completed_at: string | null }>;
   semester_metrics: {
     attendance_percentage: number;
     attendance_threshold?: number;
@@ -304,6 +305,12 @@ export function getAccessibleStudents() {
 
 export function getParentHome(studentId?: string) {
   return apiFetch<ParentHomeResponse>(withQuery("/api/v1/screens/parent/home/", { student_id: studentId }));
+}
+
+export function setHomeworkCompleted(itemId: string, studentId: string, completed: boolean) {
+  return apiFetch(`/api/v1/homework/${itemId}/complete/${completed ? "" : `?student_id=${encodeURIComponent(studentId)}`}`, completed
+    ? { method: "POST", body: JSON.stringify({ student_id: studentId }) }
+    : { method: "DELETE" });
 }
 
 export function getParentAttendance(studentId?: string) {

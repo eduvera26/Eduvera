@@ -38,6 +38,7 @@ export interface LeaveDocumentTable { id: Generated<string>; leave_request_id: s
 export interface LeaveAuditTable { id: Generated<string>; leave_request_id: string; actor_id: string; action: "submitted" | "document_added" | "clarification_requested" | "authorized" | "declined" | "approved" | "rejected" | "withdrawn"; from_status: string; to_status: string; note: Generated<string>; created_at: Timestamp }
 export interface DiaryItemTable { id: Generated<string>; school_id: string; class_section_id: string; term_id: string; date: DateOnly; item_type: "note" | "homework" | "announcement" | "schedule"; subject_id: string | null; title: string; body: string; author_id: string; due_at: NullableTimestamp; requires_acknowledgement: Generated<boolean>; published_at: Timestamp; created_at: Timestamp }
 export interface DiaryAcknowledgementTable { id: Generated<string>; item_id: string; student_id: string; acknowledged_by: string; acknowledged_at: Timestamp }
+export interface HomeworkCompletionTable { item_id: string; student_id: string; completed_by: string; completed_at: Timestamp }
 export interface DiaryNoteTable { id: Generated<string>; item_id: string; student_id: string; author_id: string; body: string; created_at: Timestamp }
 export interface NotificationTable { id: Generated<string>; recipient_id: string; kind: "attendance" | "leave" | "diary" | "general"; title: string; body: string; link: Generated<string>; metadata: Json; read_at: NullableTimestamp; created_at: Timestamp }
 export interface SchoolContactTable { id: Generated<string>; school_id: string; label: string; name: string; phone: Generated<string>; email: Generated<string>; availability: Generated<string>; priority: Generated<number> }
@@ -68,6 +69,7 @@ export interface Database {
   leave_audits: LeaveAuditTable;
   diary_items: DiaryItemTable;
   diary_acknowledgements: DiaryAcknowledgementTable;
+  homework_completions: HomeworkCompletionTable;
   diary_notes: DiaryNoteTable;
   notifications: NotificationTable;
   school_contacts: SchoolContactTable;

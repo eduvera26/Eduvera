@@ -143,6 +143,17 @@ export class SchoolController {
     return this.school.parentHome(request.authUser, studentId);
   }
 
+  @Post("homework/:itemId/complete/")
+  @HttpCode(200)
+  completeHomework(@Req() request: AuthenticatedRequest, @Param("itemId") itemId: string) {
+    return this.school.setHomeworkCompleted(request.authUser, itemId, (request.body as { student_id?: string })?.student_id, true);
+  }
+
+  @Delete("homework/:itemId/complete/")
+  async reopenHomework(@Req() request: AuthenticatedRequest, @Param("itemId") itemId: string, @Query("student_id") studentId?: string) {
+    return this.school.setHomeworkCompleted(request.authUser, itemId, studentId, false);
+  }
+
   @Get("screens/parent/attendance/")
   parentAttendance(@Req() request: AuthenticatedRequest, @Query("student_id") studentId?: string) {
     return this.school.parentAttendance(request.authUser, studentId);

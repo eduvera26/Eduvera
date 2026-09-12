@@ -161,6 +161,25 @@ describe("implemented application routes", () => {
     expect(within(dialog).getByRole("list", { name: "All class attendance" })).toBeVisible();
   });
 
+  it("opens attendance from the whole card and reviews pending and completed homework", async () => {
+    render(<MemoryRouter initialEntries={["/parent/home"]}><App /></MemoryRouter>);
+    const attendance = await screen.findByRole("button", { name: "View all class attendance" });
+    expect(attendance).toHaveClass("metric-card__hit-area");
+    fireEvent.click(attendance);
+    expect(screen.getByRole("dialog", { name: /standings/ })).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Close attendance standings" }));
+
+    const homework = screen.getByRole("button", { name: "View homework details" });
+    expect(homework).toHaveClass("metric-card__hit-area");
+    fireEvent.click(homework);
+    const dialog = screen.getByRole("dialog", { name: "Homework details" });
+    expect(within(dialog).getByRole("tab", { name: "Pending (1)" })).toHaveAttribute("aria-selected", "true");
+    expect(within(dialog).getByText("Algebra practice")).toBeVisible();
+    fireEvent.click(within(dialog).getByRole("tab", { name: "Completed (11)" }));
+    expect(within(dialog).getByText("Homework assignment 2")).toBeVisible();
+    expect(within(dialog).queryByText("Algebra practice")).not.toBeInTheDocument();
+  });
+
   it("opens all class attendance by tapping the score in the parent Attendance tab", async () => {
     const interact = userEvent.setup();
     render(<MemoryRouter initialEntries={["/parent/attendance"]}><App /></MemoryRouter>);

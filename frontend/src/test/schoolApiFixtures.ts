@@ -137,6 +137,15 @@ const home = {
   today_schedule: [slot],
   diary_preview: [],
   unread_notifications: 0,
+  homework_items: Array.from({ length: 12 }, (_, index) => ({
+    id: `homework-${index + 1}`,
+    title: index === 0 ? "Algebra practice" : `Homework assignment ${index + 1}`,
+    body: index === 0 ? "Complete exercises 1–5." : "Review classwork.",
+    subject_name: "Mathematics",
+    due_at: "2026-09-20T10:00:00.000Z",
+    published_at: "2026-09-10T10:00:00.000Z",
+    completed_at: index === 0 ? null : "2026-09-11T10:00:00.000Z",
+  })),
   semester_metrics: {
     attendance_percentage: 95,
     attendance_trend_percent: 5,

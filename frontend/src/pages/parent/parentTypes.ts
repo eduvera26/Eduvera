@@ -14,6 +14,7 @@ export interface ParentChildSummary {
 
 export interface ParentHomeData {
   ranking?: AttendanceRankingData;
+  homeworkItems?: Array<{ id: string; title: string; body: string; subject: string | null; dueAt: string | null; completedAt: string | null }>;
   child: ParentChildSummary;
   idCard: {
     studentName: string;

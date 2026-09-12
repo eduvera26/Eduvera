@@ -285,7 +285,11 @@
 .next-period time { color: #33405b; font-size: 11px; font-weight: 600; }
 
 .metric-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 10px; }
-.metric-card { min-height: 124px; padding: 14px; border: 1px solid rgba(226,232,240,.72); border-radius: 12px; background: white; box-shadow: 0 1px 2px rgba(15,23,42,.04), 0 1px 3px rgba(29,78,216,.02); }
+.metric-card { position: relative; min-height: 124px; padding: 14px; border: 1px solid rgba(226,232,240,.72); border-radius: 12px; background: white; box-shadow: 0 1px 2px rgba(15,23,42,.04), 0 1px 3px rgba(29,78,216,.02); }
+.metric-card__hit-area { position: absolute; inset: 0; z-index: 1; width: 100%; height: 100%; border: 0; border-radius: inherit; background: transparent; cursor: pointer; }
+.metric-card__hit-area:focus-visible { outline: 3px solid var(--parent-primary-bright); outline-offset: 3px; }
+.metric-card:has(.metric-card__hit-area):hover { border-color: #94b1f5; box-shadow: 0 5px 16px rgba(29,78,216,.12); }
+.metric-card__open-indicator { color: var(--parent-primary-bright); }
 .metric-card__header { justify-content: space-between; color: var(--parent-muted); font-size: 11px; line-height: 14px; font-weight: 700; letter-spacing: 0.04em; }
 .metric-card__header svg { color: var(--parent-primary); }
 .metric-card__title-button, .attendance-ranking-trigger { padding: 0; border: 0; background: none; color: inherit; font: inherit; letter-spacing: inherit; text-align: left; cursor: pointer; }

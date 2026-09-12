@@ -164,6 +164,30 @@ describe("OmniSchool API", () => {
     expect(notifications.results[0]).toEqual(expect.objectContaining({ id: expect.any(String), kind: expect.any(String), title: expect.any(String), body: expect.any(String), link: expect.any(String), created_at: expect.any(String) }));
   });
 
+  it("scopes homework completion to linked children and updates the pending count", async () => {
+    const guardian = new BrowserSession();
+    expect((await guardian.login("pooja.parent")).status).toBe(200);
+    const before = await json(await guardian.request("/api/v1/screens/parent/home/"));
+    expect(before.homework_items).toHaveLength(before.semester_metrics.homework_total);
+    const item = before.homework_items.find((entry: any) => !entry.completed_at);
+    expect(item).toBeDefined();
+    const path = `/api/v1/homework/${item.id}/complete/`;
+    try {
+      const marked = await guardian.request(path, { method: "POST", body: JSON.stringify({ student_id: before.student.id }) }, true);
+      expect(marked.status).toBe(200);
+      const after = await json(await guardian.request("/api/v1/screens/parent/home/"));
+      expect(after.homework_items.find((entry: any) => entry.id === item.id).completed_at).toBeTruthy();
+      expect(after.semester_metrics.homework_due).toBe(before.semester_metrics.homework_due - 1);
+      const otherChild = before.siblings[0];
+      if (otherChild) {
+        const sibling = await json(await guardian.request(`/api/v1/screens/parent/home/?student_id=${otherChild.id}`));
+        expect(sibling.homework_items.find((entry: any) => entry.id === item.id)?.completed_at).toBeFalsy();
+      }
+    } finally {
+      expect((await guardian.request(`${path}?student_id=${before.student.id}`, { method: "DELETE" }, true)).status).toBe(200);
+    }
+  });
+
   it("keeps clarification non-destructive and records the guardian note", async () => {
     const browser = new BrowserSession();
     await browser.login("pooja.parent");
