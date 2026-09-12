@@ -8,7 +8,7 @@ and stores what GitHub Actions needs (RAILWAY_TOKEN secret, STAGE_URL variable)
 so pushes to Stage deploy automatically.
 
 Requires:
-  RAILWAY_ACCOUNT_TOKEN   an account token from https://railway.com/account/tokens
+  RAILWAY_ACCOUNT_TOKEN   an account or workspace token from https://railway.com/account/tokens
   GH_TOKEN                a GitHub token with repo scope (to store the secret/variable)
   DATABASE_URL            the Supabase connection string (percent-encoded password)
 
@@ -43,10 +43,17 @@ def gql(query: str, variables: dict | None = None) -> dict:
     req = urllib.request.Request(
         RAILWAY_API,
         data=json.dumps({"query": query, "variables": variables or {}}).encode(),
-        headers={"Authorization": f"Bearer {need('RAILWAY_ACCOUNT_TOKEN')}", "Content-Type": "application/json"},
+        headers={
+            "Authorization": f"Bearer {need('RAILWAY_ACCOUNT_TOKEN')}",
+            "Content-Type": "application/json",
+            "User-Agent": "omnischool-bootstrap/1.0",   # Railway's edge rejects the default urllib agent
+        },
     )
-    with urllib.request.urlopen(req) as r:
-        body = json.loads(r.read())
+    try:
+        with urllib.request.urlopen(req) as r:
+            body = json.loads(r.read())
+    except urllib.error.HTTPError as e:  # type: ignore[attr-defined]
+        raise RuntimeError(f"HTTP {e.code}: {e.read().decode(errors='replace')[:400]}") from None
     if body.get("errors"):
         raise RuntimeError(json.dumps(body["errors"], indent=1))
     return body["data"]
@@ -73,8 +80,9 @@ def gh(method: str, path: str, body: dict | None = None) -> tuple[int, dict]:
 
 # ---------------------------------------------------------------- project + environment
 def find_or_create_project() -> tuple[str, str]:
-    data = gql("""query { me { projects { edges { node { id name environments { edges { node { id name } } } } } } } }""")
-    for edge in data["me"]["projects"]["edges"]:
+    # Works with both account tokens and workspace tokens (the latter cannot query `me`).
+    data = gql("""query { projects { edges { node { id name environments { edges { node { id name } } } } } } }""")
+    for edge in data["projects"]["edges"]:
         node = edge["node"]
         if node["name"] == PROJECT:
             envs = {e["node"]["name"]: e["node"]["id"] for e in node["environments"]["edges"]}
@@ -116,10 +124,10 @@ def pin_region(service_id: str, env_id: str) -> None:
         print(f"could not pin region automatically ({e.splitlines()[0][:80]}); set Singapore in the dashboard")
 
 
-def ensure_domain(service_id: str, env_id: str) -> str:
+def ensure_domain(project_id: str, service_id: str, env_id: str) -> str:
     data = gql(
-        """query($s: String!, $e: String!) { domains(serviceId: $s, environmentId: $e) { serviceDomains { domain } } }""",
-        {"s": service_id, "e": env_id},
+        """query($p: String!, $s: String!, $e: String!) { domains(projectId: $p, serviceId: $s, environmentId: $e) { serviceDomains { domain } } }""",
+        {"p": project_id, "s": service_id, "e": env_id},
     )
     existing = data["domains"]["serviceDomains"]
     if existing:
@@ -127,7 +135,7 @@ def ensure_domain(service_id: str, env_id: str) -> str:
         return existing[0]["domain"]
     data = gql(
         """mutation($input: ServiceDomainCreateInput!) { serviceDomainCreate(input: $input) { domain } }""",
-        {"input": {"serviceId": service_id, "environmentId": env_id}},
+        {"input": {"serviceId": service_id, "environmentId": env_id, "targetPort": 8000}},
     )
     print(f"domain created: {data['serviceDomainCreate']['domain']}")
     return data["serviceDomainCreate"]["domain"]
@@ -141,7 +149,7 @@ def ensure_volume(project_id: str, service_id: str, env_id: str) -> None:
     try:
         gql(
             """mutation($input: VolumeCreateInput!) { volumeCreate(input: $input) { id } }""",
-            {"input": {"projectId": project_id, "environmentId": env_id, "serviceId": service_id, "mountPath": "/app/storage/leave-documents"}},
+            {"input": {"projectId": project_id, "environmentId": env_id, "serviceId": service_id, "mountPath": "/app/storage/leave-documents", "region": REGION}},
         )
         print("volume created at /app/storage/leave-documents")
     except RuntimeError as e:
@@ -199,7 +207,7 @@ def main() -> None:
     project_id, env_id = find_or_create_project()
     service_id = find_or_create_service(project_id)
     pin_region(service_id, env_id)
-    domain = ensure_domain(service_id, env_id)
+    domain = ensure_domain(project_id, service_id, env_id)
     public_url = f"https://{domain}"
     ensure_volume(project_id, service_id, env_id)
     set_variables(project_id, service_id, env_id, public_url)
