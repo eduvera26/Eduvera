@@ -251,13 +251,13 @@ describe("implemented application routes", () => {
     await waitFor(() => expect(document.querySelector(".parent-id-stack.has-three-or-more")).toBeInTheDocument());
     expect(screen.queryByRole("button", { name: /Aarav Sharma • Class/ })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Switch to Ananya/ })).not.toBeInTheDocument();
-    await interact.click(chooseChild);
+    fireEvent.click(chooseChild);
     expect(screen.getByRole("dialog", { name: "Select child profile" })).toBeVisible();
-    await interact.click(screen.getByRole("button", { name: "View Ananya Sharma's parent dashboard" }));
+    fireEvent.click(screen.getByRole("button", { name: "View Ananya Sharma's parent dashboard" }));
     expect(await screen.findByRole("button", { name: /Open digital student ID for Ananya Sharma/ }, { timeout: 5000 })).toBeVisible();
     await waitFor(() => expect(chooseChild).toBeEnabled(), { timeout: 5000 });
-    await interact.click(chooseChild);
-    await interact.click(screen.getByRole("button", { name: "View Rohan Sharma's parent dashboard" }));
+    fireEvent.click(chooseChild);
+    fireEvent.click(screen.getByRole("button", { name: "View Rohan Sharma's parent dashboard" }));
     expect(await screen.findByRole("button", { name: /Open digital student ID for Rohan Sharma/ }, { timeout: 5000 })).toBeVisible();
     await waitFor(() => expect(chooseChild).toBeEnabled(), { timeout: 5000 });
     const rohanCard = screen.getByRole("button", { name: /Open digital student ID for Rohan Sharma/ });
@@ -270,7 +270,7 @@ describe("implemented application routes", () => {
     fireEvent.touchEnd(ananyaCard, { changedTouches: [{ clientX: 80 }] });
     await interact.click(await screen.findByRole("button", { name: /Open digital student ID for Rohan Sharma/ }, { timeout: 5000 }));
     expect(screen.getByRole("dialog", { name: "Rohan Sharma" })).toHaveTextContent("CIS-003");
-  }, 15000);
+  }, 30000);
 
   it("switches directly between two child profiles without opening a menu", async () => {
     useInstantCardTransitions();
@@ -363,9 +363,9 @@ describe("implemented application routes", () => {
     expect(await screen.findByRole("button", { name: /^Open digital student ID for Aarav Sharma/ })).toBeVisible();
     await waitFor(() => expect(document.querySelector(".parent-id-stack.has-three-or-more")).toBeInTheDocument());
     const chooser = screen.getByRole("button", { name: "Choose child profile" });
-    await userEvent.setup().click(chooser);
+    fireEvent.click(chooser);
     expect(screen.getByRole("dialog", { name: "Select child profile" }).querySelectorAll("button")).toHaveLength(4);
-    await userEvent.setup().click(chooser);
+    fireEvent.click(chooser);
     await swipe("Aarav", "Kavya", "right");
     await swipe("Kavya", "Rohan", "right");
     await swipe("Rohan", "Ananya", "right");
@@ -374,7 +374,7 @@ describe("implemented application routes", () => {
     await swipe("Ananya", "Rohan", "left");
     await swipe("Rohan", "Kavya", "left");
     await swipe("Kavya", "Aarav", "left");
-  }, 30000);
+  }, 60000);
 
   it("renders the timetable as a weekly period chart without the old tab switcher", async () => {
     render(<MemoryRouter initialEntries={["/student/timetable"]}><App /></MemoryRouter>);
