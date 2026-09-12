@@ -18,6 +18,7 @@ import {
 import { fallbackAttendanceData } from "./parentDemoData";
 import { ParentShell } from "./ParentShell";
 import { schoolDateToday } from "../../lib/schoolTime";
+import { AttendanceRankingDialog } from "../../features/school/AttendanceRankingDialog";
 import type { ParentAttendanceData, ParentPageAction } from "./parentTypes";
 import "./parent-pages.css";
 
@@ -45,6 +46,7 @@ export function ParentAttendancePage({
       data.month.days[0]?.id ?? "",
   );
   const [messageState, setMessageState] = useState<MessageState>("idle");
+  const [rankingOpen, setRankingOpen] = useState(false);
   const selectedDay = data.month.days.find((day) => day.id === selectedDate);
   const firstDay = data.month.days[0]?.id;
   const leadingBlankDays = firstDay
@@ -87,7 +89,7 @@ export function ParentAttendancePage({
         <section className="aggregate-card" aria-labelledby="aggregate-heading">
           <div className="aggregate-card__top">
             <div>
-              <span id="aggregate-heading">Overall Aggregate</span>
+              <button type="button" id="aggregate-heading" className="attendance-ranking-trigger" onClick={() => setRankingOpen(true)}>Overall Aggregate <span aria-hidden="true">↗</span></button>
               <div className="aggregate-card__score">
                 <strong>{data.aggregatePercent.toFixed(1)}%</strong>
                 {data.trendPercent === undefined ? <span>Live term</span> : (
@@ -105,6 +107,7 @@ export function ParentAttendancePage({
             <span><strong>Safe Zone: +{data.safeCushionDays} Days</strong> cushion buffer before {data.minimumPercent}% CBSE minimum threshold.</span>
           </div>
         </section>
+        {rankingOpen && <AttendanceRankingDialog ranking={data.ranking} className={`${data.child.grade} • Section ${data.child.section}`} currentLabel="Your child" onClose={() => setRankingOpen(false)} />}
 
         <section className="attendance-stat-grid" aria-label="Attendance summary">
           <article className="attendance-stat-card">

@@ -144,6 +144,8 @@ describe("OmniSchool API", () => {
       homework_previous: expect.any(Number),
     });
     expect(home.semester_metrics.homework_total).toBeGreaterThanOrEqual(home.semester_metrics.homework_due);
+    expect(home.ranking.students).toHaveLength(25);
+    expect(home.ranking.students.filter((item: any) => item.is_current)).toMatchObject([{ name: "Aarav Sharma", rank: 4 }]);
     expect(home.semester_metrics.attendance_trend_percent === null || Number.isFinite(home.semester_metrics.attendance_trend_percent)).toBe(true);
     expect(home.contacts[0]).toMatchObject({ name: "Ms. Kavita Mehta", email: "kavita.mehta@cambridge.example.test" });
     const parentLeave = await json(await browser.request(`/api/v1/screens/parent/leave/${home.action_required.id}/`));
@@ -154,6 +156,7 @@ describe("OmniSchool API", () => {
     });
     const attendance = await json(await browser.request("/api/v1/screens/parent/attendance/"));
     expect(attendance.contacts[0].phone).toBeTruthy();
+    expect(attendance.ranking.students).toHaveLength(25);
     const timetable = await browser.request("/api/v1/students/timetable/");
     expect(timetable.status).toBe(200);
     expect((await json(timetable)).results.length).toBeGreaterThan(0);
@@ -297,6 +300,10 @@ describe("OmniSchool API", () => {
     expect(percentages).toEqual([...percentages].sort((left: number, right: number) => right - left));
     expect(body.ranking.leaders[0].name).toMatch(/\.$/);
     expect(body.ranking.leaders[0]).toMatchObject({ avatar_url: "/assets/ananya-iyer.png", streak: expect.any(Number) });
+    expect(body.ranking.students).toHaveLength(25);
+    expect(body.ranking.students[0]).toMatchObject({ rank: 1, percentage: 100, is_current: false });
+    expect(body.ranking.students[0].name).toMatch(/\.$/);
+    expect(body.ranking.students.filter((item: any) => item.is_current)).toMatchObject([{ name: "Aarav Sharma", rank: 4 }]);
     expect(body.ranking.current_streak).toEqual(expect.any(Number));
   });
 

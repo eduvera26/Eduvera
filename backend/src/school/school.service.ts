@@ -329,7 +329,11 @@ export class SchoolService {
         )::int AS rank
         FROM eligible_scores
       )
-      SELECT * FROM ranked ORDER BY rank, roll_number
+      SELECT attendance_scores.*,
+        round(attendance_scores.attendance_points * 100.0 / NULLIF(attendance_scores.recorded_days, 0), 2) AS percentage,
+        ranked.rank
+      FROM attendance_scores LEFT JOIN ranked ON ranked.student_id=attendance_scores.student_id
+      ORDER BY ranked.rank NULLS LAST, attendance_scores.roll_number
     `.execute(this.db);
     const rows = result.rows.map((row) => {
       const recentStatuses = (row.recent_statuses ?? []) as string[];
@@ -337,26 +341,28 @@ export class SchoolService {
       return {
         student_id: row.student_id,
         avatar_url: row.avatar_url || null,
-        rank: Number(row.rank),
+        rank: row.rank == null ? null : Number(row.rank),
         name: row.student_id === studentId
           ? `${row.first_name} ${row.last_name}`.trim()
           : `${row.first_name} ${String(row.last_name ?? "").slice(0, 1)}.`.trim(),
         attended: Number(row.attendance_points),
         held: Number(row.recorded_days),
         streak: firstMissedDay === -1 ? recentStatuses.length : firstMissedDay,
-        percentage: Number(row.percentage),
+        percentage: row.percentage == null ? null : Number(row.percentage),
       };
     });
-    const current = rows.find((row) => row.student_id === studentId);
+    const eligible = rows.filter((row) => row.rank !== null);
+    const current = eligible.find((row) => row.student_id === studentId);
+    const published = eligible.length > 1 && Boolean(current);
     return {
-      published: rows.length > 1 && Boolean(current),
+      published,
       as_of: today(),
-      cohort_size: rows.length,
+      cohort_size: eligible.length,
       minimum_recorded_days: 5,
       methodology: "Daily attendance points: present or late = 1, half day = 0.5, absent or excused = 0; ranked by percentage, then attendance points and recorded days.",
       current_rank: current?.rank ?? null,
       current_streak: current?.streak ?? 0,
-      leaders: rows.slice(0, 3).map((row) => ({
+      leaders: eligible.slice(0, 3).map((row) => ({
         rank: row.rank,
         name: row.name,
         avatar_url: row.avatar_url,
@@ -365,6 +371,16 @@ export class SchoolService {
         streak: row.streak,
         percentage: row.percentage,
       })),
+      students: published ? rows.map((row) => ({
+        rank: row.rank,
+        name: row.name,
+        avatar_url: row.avatar_url,
+        attended: row.attended,
+        held: row.held,
+        streak: row.streak,
+        percentage: row.percentage,
+        is_current: row.student_id === studentId,
+      })) : [],
     };
   }
 
@@ -767,6 +783,7 @@ export class SchoolService {
     return {
       student: await this.studentDto(student, enrollment), siblings: siblings.filter((item) => item.id !== student.id),
       campus_presence: campus, attendance: summary,
+      ranking,
       action_required: actionRequired,
       today_schedule: schedule, diary_preview: diary.slice(0, 3), unread_notifications: Number(unread?.count ?? 0),
       semester_metrics: {
@@ -790,17 +807,19 @@ export class SchoolService {
   async parentAttendance(user: AuthUser, studentId?: string) {
     const student = await this.studentForUser(user, studentId);
     const [, enrollment] = await Promise.all([this.requireRole(user, student, "guardian"), this.enrollment(student.id)]);
-    const [records, schedule, summary, latestGate, contacts] = await Promise.all([
+    const [records, schedule, summary, latestGate, contacts, ranking] = await Promise.all([
       this.attendanceRecords(student.id, enrollment),
       this.timetable(enrollment, isoWeekday(today())),
       this.attendanceSummary(student.id, enrollment),
       this.latestGate(student.id, today()),
       this.contacts(student.school_id),
+      this.classAttendanceRanking(student.id, enrollment),
     ]);
     return {
       student: await this.studentDto(student, enrollment),
       term: { id: enrollment.term_id, name: enrollment.term_name, academic_year: enrollment.academic_year, threshold: enrollment.attendance_threshold },
       summary,
+      ranking,
       today: records.find((row) => row.date === today()) ?? null,
       latest_gate_event: latestGate,
       expected_dismissal_at: schedule.at(-1)?.ends_at ?? null,

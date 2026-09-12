@@ -90,6 +90,27 @@ const summary = {
   percentage: 95,
 };
 
+const ranking = {
+  published: true,
+  as_of: "2026-09-16",
+  cohort_size: 4,
+  minimum_recorded_days: 5,
+  methodology: "Daily attendance points: present or late = 1, half day = 0.5, absent or excused = 0; ranked by percentage, then attendance points and recorded days.",
+  current_rank: 4,
+  current_streak: 9,
+  leaders: [
+    { rank: 1, name: "Ananya S.", avatar_url: "/assets/ananya-iyer.png", attended: 20, held: 20, streak: 20, percentage: 100 },
+    { rank: 2, name: "Kavya N.", avatar_url: "/assets/kavya-nair.png", attended: 19.5, held: 20, streak: 1, percentage: 97.5 },
+    { rank: 3, name: "Rohan V.", avatar_url: "/assets/rohan-verma.png", attended: 19, held: 20, streak: 1, percentage: 95 },
+  ],
+  students: [
+    { rank: 1, name: "Ananya S.", avatar_url: "/assets/ananya-iyer.png", attended: 20, held: 20, streak: 20, percentage: 100, is_current: false },
+    { rank: 2, name: "Kavya N.", avatar_url: "/assets/kavya-nair.png", attended: 19.5, held: 20, streak: 1, percentage: 97.5, is_current: false },
+    { rank: 3, name: "Rohan V.", avatar_url: "/assets/rohan-verma.png", attended: 19, held: 20, streak: 1, percentage: 95, is_current: false },
+    { rank: 4, name: "Aarav Sharma", avatar_url: "/assets/aarav-sharma.png", attended: 19, held: 20, streak: 9, percentage: 95, is_current: true },
+  ],
+};
+
 const contacts = [
   {
     id: "90000000-0000-4000-a000-000000000001",
@@ -103,6 +124,7 @@ const contacts = [
 
 const home = {
   student,
+  ranking,
   siblings: [],
   campus_presence: {
     occurred_at: "2026-09-16T02:34:00.000Z",
@@ -147,6 +169,7 @@ export function schoolApiFixture(path: string): unknown {
       student,
       term: { name: "Term 1", academic_year: "2026-27", threshold: 85 },
       summary,
+      ranking,
       today: {
         id: "a0000000-0000-4000-a000-000000000001",
         date: "2026-09-16",
@@ -218,20 +241,7 @@ export function schoolApiFixture(path: string): unknown {
       term: { name: "Term 1", academic_year: "2026-27", threshold: 85 },
       summary,
       subjects: [subjectAttendance],
-      ranking: {
-        published: true,
-        as_of: "2026-09-16",
-        cohort_size: 4,
-        minimum_recorded_days: 5,
-        methodology: "Daily attendance points: present or late = 1, half day = 0.5, absent or excused = 0; ranked by percentage, then attendance points and recorded days.",
-        current_rank: 4,
-        current_streak: 9,
-        leaders: [
-          { rank: 1, name: "Ananya S.", avatar_url: "/assets/ananya-iyer.png", attended: 20, held: 20, streak: 20, percentage: 100 },
-          { rank: 2, name: "Kavya N.", avatar_url: "/assets/kavya-nair.png", attended: 19.5, held: 20, streak: 1, percentage: 97.5 },
-          { rank: 3, name: "Rohan V.", avatar_url: "/assets/rohan-verma.png", attended: 19, held: 20, streak: 1, percentage: 95 },
-        ],
-      },
+      ranking,
     };
   }
   if (path === "/api/v1/screens/student/attendance/eligibility/") {

@@ -1,3 +1,5 @@
+import type { AttendanceRankingData } from "../../features/school/AttendanceRankingDialog";
+
 export type ParentPageAction = void | Promise<void>;
 
 export interface ParentChildSummary {
@@ -11,6 +13,7 @@ export interface ParentChildSummary {
 }
 
 export interface ParentHomeData {
+  ranking?: AttendanceRankingData;
   child: ParentChildSummary;
   idCard: {
     studentName: string;
@@ -83,6 +86,7 @@ export interface AttendanceCalendarDay {
 }
 
 export interface ParentAttendanceData {
+  ranking?: AttendanceRankingData;
   child: ParentChildSummary;
   termLabel: string;
   aggregatePercent: number;

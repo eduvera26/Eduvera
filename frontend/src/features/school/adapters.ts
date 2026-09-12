@@ -17,6 +17,7 @@ import type {
   AttendanceSubjectGroup,
   StudentAttendanceData,
 } from "../../pages/student/StudentAttendancePage";
+import type { AttendanceRankingData } from "./AttendanceRankingDialog";
 import {
   type SchoolDayKey,
   type TimetableDay,
@@ -25,6 +26,7 @@ import {
 } from "../../pages/student/student-timetable-data";
 import type {
   ApiAttendanceRecord,
+  ApiAttendanceRanking,
   ApiDiaryItem,
   ApiLeaveRequest,
   ApiStudent,
@@ -50,6 +52,24 @@ const shortDateFormatter = new Intl.DateTimeFormat("en-IN", {
   day: "2-digit",
   month: "short",
 });
+
+function adaptRanking(ranking?: ApiAttendanceRanking): AttendanceRankingData | undefined {
+  if (!ranking?.published) return undefined;
+  return {
+    cohortSize: ranking.cohort_size,
+    asOf: ranking.as_of ? formatShortDate(ranking.as_of) : undefined,
+    students: (ranking.students ?? []).map((student) => ({
+      rank: student.rank,
+      name: student.name,
+      avatarUrl: student.avatar_url,
+      attended: student.attended,
+      held: student.held,
+      streak: student.streak,
+      percent: student.percentage,
+      current: student.is_current,
+    })),
+  };
+}
 
 function parseLocalDate(value: string) {
   return new Date(`${value.slice(0, 10)}T00:00:00`);
@@ -196,6 +216,7 @@ export function adaptParentHome(response: ParentHomeResponse): ParentHomeData {
   const primaryContact = response.contacts.find((contact) => isHomeroomContact(contact.label));
   return {
     child,
+    ranking: adaptRanking(response.ranking),
     idCard: {
       studentName: child.name,
       avatarUrl: child.avatarUrl,
@@ -348,6 +369,7 @@ export function adaptParentAttendance(response: ParentAttendanceResponse): Paren
   const homeroomContact = response.contacts?.find((contact) => isHomeroomContact(contact.label));
   return {
     child: classDetails(response.student),
+    ranking: adaptRanking(response.ranking),
     termLabel: `${response.term.name} • ${response.term.academic_year}`,
     aggregatePercent: Number(summary.percentage),
     trendPercent: attendanceTrend(response.calendar),
@@ -560,6 +582,7 @@ export function adaptStudentAttendance(response: StudentAttendanceResponse): Stu
   const todayWeekday = ((parseLocalDate(indiaDateToday()).getDay() + 6) % 7) + 1;
   return {
     studentName: response.student.user.display_name,
+    ranking: adaptRanking(response.ranking),
     avatarUrl: response.student.avatar_url || undefined,
     className: response.student.current_enrollment.class_name,
     rollNumber: String(response.student.current_enrollment.roll_number).padStart(2, "0"),

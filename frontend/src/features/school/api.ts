@@ -143,6 +143,7 @@ export interface ParentHomeResponse {
   siblings: ApiStudent[];
   campus_presence: ApiGateEvent | null;
   attendance: ApiAttendanceSummary;
+  ranking?: ApiAttendanceRanking;
   action_required: ApiLeaveRequest | null;
   today_schedule: ApiTimetableSlot[];
   diary_preview: ApiDiaryItem[];
@@ -168,6 +169,7 @@ export interface ParentAttendanceResponse {
   student: ApiStudent;
   term: { name: string; academic_year: string; threshold: string | number };
   summary: ApiAttendanceSummary;
+  ranking?: ApiAttendanceRanking;
   today: ApiAttendanceRecord | null;
   latest_gate_event: ApiGateEvent | null;
   expected_dismissal_at?: string | null;
@@ -207,21 +209,24 @@ export interface ParentLeaveRouteResponse {
   constraints?: LeaveConstraints;
 }
 
+export interface ApiAttendanceRanking {
+  published: boolean;
+  as_of: string;
+  cohort_size: number;
+  minimum_recorded_days: number;
+  methodology: string;
+  current_rank: number | null;
+  current_streak?: number;
+  leaders: Array<{ rank: number; name: string; avatar_url?: string | null; attended: number; held: number; streak?: number; percentage: number }>;
+  students?: Array<{ rank: number | null; name: string; avatar_url?: string | null; attended: number; held: number; streak?: number; percentage: number | null; is_current: boolean }>;
+}
+
 export interface StudentAttendanceResponse {
   student: ApiStudent;
   term: { name: string; academic_year: string; threshold: string | number };
   summary: ApiAttendanceSummary;
   subjects: ApiSubjectAttendance[];
-  ranking?: {
-    published: boolean;
-    as_of: string;
-    cohort_size: number;
-    minimum_recorded_days: number;
-    methodology: string;
-    current_rank: number | null;
-    current_streak?: number;
-    leaders: Array<{ rank: number; name: string; avatar_url?: string | null; attended: number; held: number; streak?: number; percentage: number }>;
-  };
+  ranking?: ApiAttendanceRanking;
 }
 
 export interface StudentHomeResponse {

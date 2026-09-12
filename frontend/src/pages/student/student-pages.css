@@ -750,6 +750,9 @@
   gap: 4px;
 }
 
+.attendance-hero__number--open { padding: 0; border: 0; background: none; color: inherit; font: inherit; cursor: pointer; }
+.attendance-hero__number--open:focus-visible { outline: 3px solid #fff; outline-offset: 4px; border-radius: 4px; }
+
 .attendance-hero__number > strong {
   font-size: 36px;
   font-weight: 800;
@@ -947,6 +950,13 @@
   border-color: rgba(29, 78, 216, 0.08);
   box-shadow: 0 14px 34px rgba(32, 50, 94, 0.08);
 }
+
+.attendance-leaderboard__open { border: 0; padding: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.attendance-leaderboard__open span { color: #2457ca; font-size: 14px; }
+.attendance-leaderboard__open:focus-visible,
+.leader-row--clickable:focus-visible { outline: 3px solid #2457ca; outline-offset: 3px; }
+.leader-row--clickable { width: 100%; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.leader-row--clickable:hover { border-color: #96b1ef; background: #edf3ff; }
 
 .attendance-leaderboard .section-subcopy,
 .simulator-card .section-subcopy {

@@ -25,6 +25,7 @@ import {
 
 import { StudentShell, type StudentNavKey, type StudentRouteMap } from "./StudentShell";
 import { AttendanceCopilotSheet, type AttendanceCopilotHandler } from "./AttendanceCopilotSheet";
+import { AttendanceRankingDialog, type AttendanceRankingData } from "../../features/school/AttendanceRankingDialog";
 import "./student-pages.css";
 
 export type AttendanceSubjectGroup = "core" | "language" | "activity";
@@ -66,6 +67,7 @@ function RankedAvatar({ name, avatarUrl, rank, current = false }: { name: string
 }
 
 export interface StudentAttendanceData {
+  ranking?: AttendanceRankingData;
   studentName: string;
   avatarUrl?: string;
   className: string;
@@ -200,6 +202,12 @@ export const demoStudentAttendanceData: StudentAttendanceData = {
     { rank: 2, name: "Rohan Verma", avatar_url: "/assets/rohan-verma.png", attended: 124, held: 126, streak: 28, percent: 98.4 },
     { rank: 3, name: "Kavya Nair", avatar_url: "/assets/kavya-nair.png", attended: 122, held: 126, streak: 19, percent: 96.8 },
   ],
+  ranking: { cohortSize: 4, students: [
+    { rank: 1, name: "Ananya I.", avatarUrl: "/assets/ananya-iyer.png", attended: 125, held: 126, streak: 42, percent: 99.2, current: false },
+    { rank: 2, name: "Rohan V.", avatarUrl: "/assets/rohan-verma.png", attended: 124, held: 126, streak: 28, percent: 98.4, current: false },
+    { rank: 3, name: "Kavya N.", avatarUrl: "/assets/kavya-nair.png", attended: 122, held: 126, streak: 19, percent: 96.8, current: false },
+    { rank: 4, name: "Aarav Sharma", avatarUrl: "/assets/aarav-sharma.png", attended: 119, held: 126, streak: 14, percent: 94.4, current: true },
+  ] },
   currentRank: 4,
   honorsLabel: "Honors Track",
   idLabel: "CIS-ID",
@@ -243,6 +251,9 @@ export function StudentAttendancePage({
   const [projectedAbsences, setProjectedAbsences] = useState(1);
   const [filter, setFilter] = useState<SubjectFilter>("all");
   const [copilotOpen, setCopilotOpen] = useState(initialCopilotOpen);
+  const [rankingFocusIndex, setRankingFocusIndex] = useState<number | null>(null);
+  const [rankingOpen, setRankingOpen] = useState(false);
+  const openRanking = (index?: number) => { setRankingFocusIndex(index ?? null); setRankingOpen(true); };
   const projectedTotal = data.held + projectedAbsences;
   const projected = projectedTotal > 0 ? (data.attended / projectedTotal) * 100 : 0;
   const delta = projected - data.aggregate;
@@ -277,10 +288,10 @@ export function StudentAttendancePage({
           <div className="attendance-hero__headline">
             <div>
               <p className="eyebrow" id="overall-attendance-heading">Overall Aggregate</p>
-              <div className="attendance-hero__number">
+              <button className="attendance-hero__number attendance-hero__number--open" type="button" aria-label="View all class attendance from your percentage" onClick={() => openRanking(data.ranking?.students.findIndex((item) => item.current) ?? undefined)}>
                 <strong>{data.aggregate.toFixed(1)}</strong><span>%</span>
                 {data.trend !== undefined && <span className="trend-pill"><ArrowUp size={12} />{data.trend >= 0 ? "+" : ""}{data.trend.toFixed(1)}%</span>}
-              </div>
+              </button>
               <p>{attendanceSummary}</p>
             </div>
             <div className="attendance-ring">
@@ -308,30 +319,32 @@ export function StudentAttendancePage({
         <section className="student-card attendance-leaderboard" aria-labelledby="leaderboard-heading">
           <header className="section-heading">
             <span className="section-heading__icon"><Medal size={18} /></span>
-            <div><h2 id="leaderboard-heading">Top Attendees • {data.className}</h2></div>
+            <div><h2 id="leaderboard-heading"><button className="attendance-leaderboard__open" type="button" onClick={() => openRanking()}>Top Attendees • {data.className} <span aria-hidden="true">↗</span></button></h2></div>
             <span className={`status-chip ${leaders.length > 0 ? "status-chip--green" : ""}`}>{leaders.length > 0 ? data.termLabel.split(" (")[0] : "Not published"}</span>
           </header>
           <p className="section-subcopy">{leaders.length > 0 ? `Punctual attendance and active on-time streaks for ${data.className}${data.rankingAsOf ? ` • Updated ${data.rankingAsOf}` : ""}.` : "A ranking appears after at least two classmates have five recorded school days."}</p>
           <div className="leader-list">
             {leaders.map((leader) => (
-              <div className="leader-row" key={leader.rank}>
+              <button className="leader-row leader-row--clickable" type="button" key={leader.rank} aria-label={`View all class attendance, starting at rank ${leader.rank}`} onClick={() => openRanking(data.ranking?.students.findIndex((item) => item.rank === leader.rank) ?? undefined)}>
                 <RankedAvatar name={leader.name} avatarUrl={leader.avatar_url} rank={leader.rank} />
                 <span className="leader-copy"><strong>{leader.name}</strong><small>{leader.attended}/{leader.held} days{leader.streak !== undefined ? ` • ${leader.streak}d streak` : ""}</small></span>
                 <strong className="leader-percent">{leader.percent.toFixed(1)}%</strong>
-              </div>
+              </button>
             ))}
           </div>
           {data.currentRank !== undefined && <div className="current-standing">
             <div className="current-standing__label"><strong>Your Current Standing</strong><span>#{data.currentRank} in {data.className}</span><em>{data.rankingCohortSize ?? leaders.length + 1} eligible</em></div>
-            <div className="leader-row leader-row--current">
+            <button className="leader-row leader-row--current leader-row--clickable" type="button" aria-label="View all class attendance, starting at your standing" onClick={() => openRanking(data.ranking?.students.findIndex((item) => item.current) ?? undefined)}>
               <RankedAvatar name={data.studentName} avatarUrl={data.avatarUrl} rank={data.currentRank} current />
               <span className="leader-copy"><strong>{data.studentName}</strong><small>{data.attended}/{data.held} days{data.streak !== undefined ? ` • ${data.streak}d streak` : ""}</small></span>
               <strong className="leader-percent">{data.aggregate.toFixed(1)}%</strong>
-            </div>
+            </button>
             {nextRank ? <div className="current-standing__next"><span>Next milestone: Rank #{nextRank.rank}</span><strong>{attendanceDaysToOvertake ? `+${attendanceDaysToOvertake} consecutive days to overtake` : "Keep your attendance streak active"}</strong></div> : null}
           </div>}
           {data.rankingMethodology && leaders.length > 0 ? <p className="ranking-methodology">{data.rankingMethodology}</p> : null}
         </section>
+
+        {rankingOpen && <AttendanceRankingDialog ranking={data.ranking} className={data.className} focusIndex={rankingFocusIndex !== null && rankingFocusIndex >= 0 ? rankingFocusIndex : undefined} onClose={() => setRankingOpen(false)} />}
 
         <section className="student-card simulator-card" aria-labelledby="simulator-heading">
           <header className="section-heading">

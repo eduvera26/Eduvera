@@ -21,6 +21,7 @@ import { fallbackHomeData } from "./parentDemoData";
 import { useOptionalAuth } from "../../features/auth/AuthContext";
 import { getAccessibleStudents } from "../../features/school/api";
 import { StudentIdentityCard } from "../student/StudentIdentityCard";
+import { AttendanceRankingDialog } from "../../features/school/AttendanceRankingDialog";
 import { ParentShell } from "./ParentShell";
 import type { ParentHomeData, ParentPageAction } from "./parentTypes";
 import "./parent-pages.css";
@@ -41,6 +42,7 @@ function MetricCard({
   tone,
   insight,
   valueAccessory,
+  onTitleClick,
 }: {
   label: string;
   icon: ReactNode;
@@ -49,11 +51,12 @@ function MetricCard({
   tone?: "positive";
   insight?: ReactNode;
   valueAccessory?: ReactNode;
+  onTitleClick?: () => void;
 }) {
   return (
     <article className="metric-card">
       <div className="metric-card__header">
-        <span>{label}</span>
+        {onTitleClick ? <button type="button" className="metric-card__title-button" onClick={onTitleClick} aria-label={`View all class ${label.toLowerCase()}`}>{label} <span aria-hidden="true">↗</span></button> : <span>{label}</span>}
         {icon}
       </div>
       <div className="metric-card__value-row">
@@ -84,6 +87,7 @@ export function ParentHomePage({
   const auth = useOptionalAuth();
   const [transition, setTransition] = useState<CardTransition | null>(null);
   const [switchError, setSwitchError] = useState("");
+  const [rankingOpen, setRankingOpen] = useState(false);
   const switchTimer = useRef<number | null>(null);
   const mounted = useRef(true);
   useEffect(() => {
@@ -246,7 +250,7 @@ export function ParentHomePage({
             <span className="section-link-label">{data.metrics.termLabel}</span>
           </div>
           <div className="metric-grid">
-            <MetricCard label="Attendance" icon={<PieChart size={19} />} value={data.metrics.attendance}
+            <MetricCard label="Attendance" icon={<PieChart size={19} />} value={data.metrics.attendance} onTitleClick={() => setRankingOpen(true)}
               valueAccessory={<MetricTrend value={data.metrics.attendanceTrend} label="vs prior recorded days" compact />} insight={<>
               <span className="metric-card__rank">{data.metrics.attendanceTrend == null ? "Not enough attendance history" : "vs prior recorded days"}</span>
               <span className="metric-card__rank">{data.metrics.attendanceRank ? `Class rank #${data.metrics.attendanceRank}${data.metrics.attendanceCohortSize ? ` of ${data.metrics.attendanceCohortSize}` : ""}` : "Class rank not published"}</span>
@@ -267,6 +271,7 @@ export function ParentHomePage({
               <span>{data.metrics.duesDetail}</span>
             </MetricCard>
           </div>
+          {rankingOpen && <AttendanceRankingDialog ranking={data.ranking} className={data.idCard.className} currentLabel="Your child" onClose={() => setRankingOpen(false)} />}
         </section>
 
         <section aria-labelledby="shortcuts-heading">

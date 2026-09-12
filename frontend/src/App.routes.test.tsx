@@ -128,9 +128,42 @@ describe("implemented application routes", () => {
     expect(await screen.findByText("Overall Aggregate")).toBeVisible();
   });
 
+  it("opens the full attendance standings from each top student and the student's own row", async () => {
+    const interact = userEvent.setup();
+    render(<MemoryRouter initialEntries={["/student/attendance"]}><App /></MemoryRouter>);
+    for (const rank of [1, 2, 3]) {
+      await interact.click(await screen.findByRole("button", { name: `View all class attendance, starting at rank ${rank}` }));
+      const dialog = screen.getByRole("dialog", { name: "Class 7A standings" });
+      expect(within(dialog).getAllByRole("listitem")).toHaveLength(4);
+      expect(within(dialog).getByRole("listitem", { name: /You, Aarav Sharma/ })).toHaveClass("attendance-ranking__row--current");
+      await interact.click(within(dialog).getByRole("button", { name: "Close attendance standings" }));
+    }
+    const ownStanding = screen.getByRole("button", { name: "View all class attendance, starting at your standing" });
+    await interact.click(ownStanding);
+    expect(screen.getByRole("dialog", { name: "Class 7A standings" })).toBeVisible();
+    await interact.keyboard("{Escape}");
+    expect(screen.queryByRole("dialog", { name: "Class 7A standings" })).not.toBeInTheDocument();
+    expect(ownStanding).toHaveFocus();
+    await interact.click(screen.getByRole("button", { name: /Top Attendees • Class 7A/ }));
+    expect(screen.getByRole("dialog", { name: "Class 7A standings" })).toBeVisible();
+    await interact.click(screen.getByRole("button", { name: "Close attendance standings" }));
+    await interact.click(screen.getByRole("button", { name: "View all class attendance from your percentage" }));
+    expect(screen.getByRole("dialog", { name: "Class 7A standings" })).toBeVisible();
+  }, 15000);
+
+  it.each(["/parent/home", "/parent/attendance"])("opens the same highlighted class standings from %s", async (path) => {
+    const interact = userEvent.setup();
+    render(<MemoryRouter initialEntries={[path]}><App /></MemoryRouter>);
+    await interact.click(await screen.findByRole("button", { name: path.endsWith("home") ? "View all class attendance" : /Overall Aggregate/ }));
+    const dialog = screen.getByRole("dialog", { name: /standings/ });
+    expect(within(dialog).getAllByRole("listitem")).toHaveLength(4);
+    expect(within(dialog).getByRole("listitem", { name: /Your child, Aarav Sharma/ })).toHaveClass("attendance-ranking__row--current");
+    expect(within(dialog).getByRole("list", { name: "All class attendance" })).toBeVisible();
+  });
+
   it("shows live attendance rank and trends alongside pending and historical homework", async () => {
     render(<MemoryRouter initialEntries={["/parent/home"]}><App /></MemoryRouter>);
-    const attendance = within((await screen.findByText("Attendance", { selector: ".metric-card__header span" })).closest("article")!);
+    const attendance = within((await screen.findByRole("button", { name: "View all class attendance" })).closest("article")!);
     const risingTrend = attendance.getByText("+5%");
     expect(risingTrend.closest(".metric-card__value-row")).toContainElement(attendance.getByText("95.0%"));
     expect(risingTrend.querySelector("svg.lucide-trending-up")).toBeInTheDocument();
@@ -182,7 +215,7 @@ describe("implemented application routes", () => {
       return original(path);
     });
     render(<MemoryRouter initialEntries={["/parent/home"]}><App /></MemoryRouter>);
-    const attendance = within((await screen.findByText("Attendance", { selector: ".metric-card__header span" })).closest("article")!);
+    const attendance = within((await screen.findByRole("button", { name: "View all class attendance" })).closest("article")!);
     const fallingTrend = attendance.getByText("-6%");
     expect(fallingTrend.closest(".metric-card__value-row")).toContainElement(attendance.getByText("95.0%"));
     expect(fallingTrend.querySelector("svg.lucide-trending-down")).toBeInTheDocument();
