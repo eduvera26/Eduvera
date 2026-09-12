@@ -21,17 +21,22 @@ export class SpaController {
   @Public()
   @Get(["/", "login", "signup", "launcher", "workspace", "parent", "parent/*", "student", "student/*", "teacher", "teacher/*", "principal", "principal/*", "onboarding/*"])
   async index(@Res() reply: FastifyReply) {
+    return this.serve(reply, config().spaDistDir, "Build the React application before serving the SPA.");
+  }
+
+  // Desktop staff console, built with base "/staff/". Same origin, same session.
+  @Public()
+  @Get(["staff", "staff/*"])
+  async staff(@Res() reply: FastifyReply) {
+    return this.serve(reply, config().staffDistDir, "Build the desktop dashboard before serving /staff.");
+  }
+
+  private async serve(reply: FastifyReply, dir: string, detail: string) {
     try {
-      const html = await readFile(join(config().spaDistDir, "index.html"));
+      const html = await readFile(join(dir, "index.html"));
       return reply.type("text/html; charset=utf-8").send(html);
     } catch {
-      return reply.status(503).send({
-        error: {
-          status: 503,
-          code: "frontend_not_built",
-          detail: "Build the React application before serving the SPA.",
-        },
-      });
+      return reply.status(503).send({ error: { status: 503, code: "frontend_not_built", detail } });
     }
   }
 }

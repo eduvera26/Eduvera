@@ -1,0 +1,126 @@
+name: Stage
+
+on:
+  push:
+    branches: [Stage]
+  workflow_dispatch:
+    inputs:
+      seed:
+        description: "Re-apply the demo seed to the shared database (upsert; run on demand, not per push)"
+        type: boolean
+        default: false
+
+concurrency:
+  group: stage
+  cancel-in-progress: false
+
+jobs:
+  # Runs on GitHub: everything must typecheck, lint, build and pass tests
+  # against the shared Supabase database (repo secret DATABASE_URL) before
+  # anything is deployed. Migrations are idempotent (a no-op when nothing is
+  # pending) and the suite cleans up the rows it creates. The demo seed is
+  # already in the shared database; it is only re-applied when asked for.
+  verify:
+    name: Verify
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      COOKIE_SECRET: ${{ secrets.COOKIE_SECRET }}
+      DEMO_MODE: "true"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: "**/package-lock.json"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Backend · install, typecheck, lint, build
+        working-directory: backend
+        run: |
+          npm ci
+          npm run typecheck
+          npm run lint
+          npm run build
+
+      - name: Backend · apply pending migrations
+        working-directory: backend
+        run: npm run db:migrate
+
+      - name: Backend · re-seed demo data (only when requested)
+        if: github.event_name == 'workflow_dispatch' && inputs.seed
+        working-directory: backend
+        run: |
+          python3 scripts/generate_school_data.py
+          node --import tsx src/database/seed.ts
+
+      - name: Backend · integration tests
+        working-directory: backend
+        run: npx vitest run
+
+      - name: Mobile app · install, typecheck, build, test
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run typecheck
+          npm run build
+          npm test
+
+      - name: Desktop dashboard · install, typecheck, build
+        working-directory: frontend-desktop
+        run: |
+          npm ci
+          npm run typecheck
+          npm run build
+
+  # Ships one container to Railway (Singapore) that serves all three:
+  # the mobile app at /, the desktop dashboard at /staff/, the API at /api.
+  # Railway builds backend/Dockerfile with the repo root as context (railway.json).
+  deploy:
+    name: Deploy to Railway
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+      RAILWAY_SERVICE: ${{ vars.RAILWAY_SERVICE || 'omnischool' }}
+      STAGE_URL: ${{ vars.STAGE_URL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Check deployment credentials
+        run: |
+          if [ -z "$RAILWAY_TOKEN" ]; then
+            echo "::error::RAILWAY_TOKEN secret is not set. Run deploy/railway-bootstrap.py once with a Railway account token to create the project and store this secret."
+            exit 1
+          fi
+
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
+
+      - name: Deploy
+        run: railway up --service "$RAILWAY_SERVICE" --ci
+
+      - name: Health check the public URL
+        if: env.STAGE_URL != ''
+        run: |
+          echo "Waiting for $STAGE_URL/readyz"
+          for i in $(seq 1 48); do
+            body=$(curl -fsS "$STAGE_URL/readyz" 2>/dev/null || true)
+            if echo "$body" | grep -q '"ready"'; then
+              echo "API ready: $body"
+              echo "Mobile app  $STAGE_URL/        [$(curl -s -o /dev/null -w '%{http_code}' "$STAGE_URL/")]"
+              echo "Desktop     $STAGE_URL/staff/  [$(curl -s -o /dev/null -w '%{http_code}' "$STAGE_URL/staff/")]"
+              echo "API docs    $STAGE_URL/api/docs [$(curl -s -o /dev/null -w '%{http_code}' "$STAGE_URL/api/docs")]"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "::error::$STAGE_URL did not become ready in time"
+          exit 1

@@ -294,11 +294,18 @@ describe("OmniSchool API", () => {
     await pool.query("DELETE FROM api_rate_limit_buckets");
     const browser = new BrowserSession();
     expect((await browser.login("kavita.staff")).status).toBe(200);
-    const home = await json(await browser.request("/api/v1/screens/teacher/home/"));
+    // Teachers have no classes at weekends, so ask for the most recent school day (Mon-Fri, IST).
+    const schoolDay = (() => {
+      const now = new Date(Date.now() + 5.5 * 3_600_000); // Asia/Kolkata, the seed's calendar
+      const back = [1, 2, 3, 4, 5, 6, 0].indexOf(now.getUTCDay()) >= 5 ? now.getUTCDay() === 6 ? 1 : 2 : 0;
+      now.setUTCDate(now.getUTCDate() - back);
+      return now.toISOString().slice(0, 10);
+    })();
+    const home = await json(await browser.request(`/api/v1/screens/teacher/home/?date=${schoolDay}`));
     expect(home.teacher).toMatchObject({ name: "Kavita Mehta", role: "staff" });
     expect(home.classes.length).toBeGreaterThan(0);
     const classId = home.classes[0].class_section_id;
-    const register = await json(await browser.request(`/api/v1/screens/teacher/attendance/?class_section_id=${classId}`));
+    const register = await json(await browser.request(`/api/v1/screens/teacher/attendance/?class_section_id=${classId}&date=${home.date}`));
     expect(register.roster).toHaveLength(25);
     const response = await browser.request("/api/v1/teacher/attendance/bulk/", { method: "POST", body: JSON.stringify({ class_section_id: classId, date: home.date, records: register.roster.map((student: any) => ({ student_id: student.id, status: student.status ?? "present", remarks: student.remarks ?? "" })) }) }, true);
     expect(response.status).toBe(200);
