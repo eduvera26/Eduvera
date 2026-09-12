@@ -43,7 +43,7 @@ export function loadConfig() {
   }
   return {
     ...value,
-    rateLimitStore: value.RATE_LIMIT_STORE ?? (value.NODE_ENV === "production" ? "postgres" : "memory"),
+    rateLimitStore: value.RATE_LIMIT_STORE ?? (value.NODE_ENV === "development" ? "memory" : "postgres"),
     allowedOrigins: value.ALLOWED_ORIGINS.split(",").map((origin) => origin.trim()).filter(Boolean),
     spaDistDir: resolve(process.cwd(), value.SPA_DIST_DIR),
     staffDistDir: resolve(process.cwd(), value.STAFF_DIST_DIR),

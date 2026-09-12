@@ -310,7 +310,10 @@ def status_for(student: dict[str, Any], day_index: int, total_days: int, rng: ra
 
 
 def local_timestamp(day: date, hour: int, minute: int) -> str:
-    return datetime.combine(day, time(hour, minute), tzinfo=IST).isoformat()
+    """A wall-clock moment on `day`, clamped so seeded history never post-dates real inserts."""
+    stamp = datetime.combine(day, time(hour, minute), tzinfo=IST)
+    ceiling = datetime.now(IST) - timedelta(minutes=5)
+    return min(stamp, ceiling).isoformat()
 
 
 def build_dataset(as_of: date, seed: int, demo_password: str) -> tuple[dict[str, list[tuple[Any, ...]]], dict[str, Any]]:
