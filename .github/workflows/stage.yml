@@ -12,8 +12,8 @@ concurrency:
 jobs:
   # Runs on GitHub: everything must typecheck, lint, build and pass tests
   # against the shared Supabase database (repo secret DATABASE_URL) before
-  # anything reaches the stage host. Migrations are idempotent, the seed is
-  # an upsert, and the suite cleans up the rows it creates.
+  # anything is deployed. Migrations are idempotent, the seed is an upsert,
+  # and the suite cleans up the rows it creates.
   verify:
     name: Verify
     runs-on: ubuntu-latest
@@ -66,28 +66,51 @@ jobs:
           npm run typecheck
           npm run build
 
-  # Runs on the self-hosted Windows runner (label: stage). Secrets stay on the
-  # host in %USERPROFILE%\.omnischool\stage.env; the workflow never sees them.
+  # Ships one container to Railway (Singapore) that serves all three:
+  # the mobile app at /, the desktop dashboard at /staff/, the API at /api.
+  # Railway builds backend/Dockerfile with the repo root as context (railway.json).
   deploy:
-    name: Deploy to stage host
+    name: Deploy to Railway
     needs: verify
-    runs-on: [self-hosted, windows, stage]
+    runs-on: ubuntu-latest
     timeout-minutes: 30
+    env:
+      RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+      RAILWAY_SERVICE: ${{ vars.RAILWAY_SERVICE || 'omnischool' }}
+      STAGE_URL: ${{ vars.STAGE_URL }}
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
 
-      - name: Install and build all three
-        shell: powershell
+      - name: Check deployment credentials
         run: |
-          foreach ($dir in 'backend', 'frontend', 'frontend-desktop') {
-            Push-Location $dir
-            npm ci --no-audit --no-fund
-            if ($LASTEXITCODE -ne 0) { throw "npm ci failed in $dir" }
-            npm run build
-            if ($LASTEXITCODE -ne 0) { throw "build failed in $dir" }
-            Pop-Location
-          }
+          if [ -z "$RAILWAY_TOKEN" ]; then
+            echo "::error::RAILWAY_TOKEN secret is not set. Run deploy/railway-bootstrap.py once with a Railway account token to create the project and store this secret."
+            exit 1
+          fi
 
-      - name: Migrate, tunnel, restart, health-check
-        shell: powershell
-        run: .\deploy\stage.ps1
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
+
+      - name: Deploy
+        run: railway up --service "$RAILWAY_SERVICE" --ci
+
+      - name: Health check the public URL
+        if: env.STAGE_URL != ''
+        run: |
+          echo "Waiting for $STAGE_URL/readyz"
+          for i in $(seq 1 48); do
+            body=$(curl -fsS "$STAGE_URL/readyz" 2>/dev/null || true)
+            if echo "$body" | grep -q '"ready"'; then
+              echo "API ready: $body"
+              echo "Mobile app  $STAGE_URL/        [$(curl -s -o /dev/null -w '%{http_code}' "$STAGE_URL/")]"
+              echo "Desktop     $STAGE_URL/staff/  [$(curl -s -o /dev/null -w '%{http_code}' "$STAGE_URL/staff/")]"
+              echo "API docs    $STAGE_URL/api/docs [$(curl -s -o /dev/null -w '%{http_code}' "$STAGE_URL/api/docs")]"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "::error::$STAGE_URL did not become ready in time"
+          exit 1
