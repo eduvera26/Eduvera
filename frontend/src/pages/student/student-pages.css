@@ -2561,26 +2561,52 @@
 .student-home-id-card > header { display: flex; align-items: center; justify-content: space-between; gap: 12px; color: #dbe7ff; font-size: 8.5px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; }
 .student-home-id-card > header span:last-child { display: inline-flex; padding: 4px 7px; border-radius: 999px; align-items: center; gap: 4px; color: #d8fff7; background: rgba(0,104,95,.32); }
 .student-home-id-card__identity { display: flex; margin-top: 17px; align-items: center; gap: 12px; }
-.student-home-id-card__identity > span:last-child { min-width: 0; }
+.student-home-id-card__copy { min-width: 0; flex: 1; }
 .student-home-id-card__identity small { color: #cbdcff; font-size: 9px; font-weight: 700; }
 .student-home-id-card__identity h1 { overflow: hidden; margin-top: 1px; font-size: 21px; line-height: 26px; letter-spacing: -.025em; white-space: nowrap; text-overflow: ellipsis; }
 .student-home-id-card__identity p { color: #dce7ff; font-size: 10px; }
 .student-home-id-card .student-home-avatar { width: 58px; height: 58px; border-radius: 17px; background: rgba(255,255,255,.18); box-shadow: 0 6px 16px rgba(5,31,92,.2); }
-.student-home-id-card > footer { display: grid; grid-template-columns: 1fr .95fr auto; margin-top: 17px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,.17); align-items: end; gap: 10px; }
+.student-home-attendance-score {
+  display: flex;
+  width: 74px;
+  min-height: 58px;
+  padding: 8px 7px;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  border-radius: 18px;
+  color: #ffffff;
+  background: rgba(255, 255, 255, .12);
+  box-shadow: 0 8px 18px rgba(5,31,92,.14);
+  text-align: center;
+}
+.student-home-attendance-score.is-safe { background: rgba(255, 255, 255, .12); }
+.student-home-attendance-score.is-danger { background: rgba(255, 180, 180, .16); }
+.student-home-attendance-score strong {
+  display: block;
+  font-size: 25px;
+  line-height: 25px;
+  font-weight: 900;
+  letter-spacing: -.055em;
+}
+.student-home-attendance-score small {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  color: rgba(255,255,255,.86);
+  font-size: 7px;
+  line-height: 9px;
+  font-weight: 800;
+  letter-spacing: .01em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.student-home-id-card > footer { display: grid; grid-template-columns: 1fr 1.4fr 54px; margin-top: 17px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,.17); align-items: end; gap: 12px; }
 .student-home-id-card > footer span small,.student-home-id-card > footer span strong { display: block; }
 .student-home-id-card > footer small { color: #bfcfff; font-size: 7px; font-weight: 800; letter-spacing: .09em; text-transform: uppercase; }
 .student-home-id-card > footer strong { overflow: hidden; margin-top: 2px; font-size: 9px; white-space: nowrap; text-overflow: ellipsis; }
-.student-home-score {
-  min-width: 74px;
-  padding: 6px 8px;
-  border-radius: 12px;
-  text-align: center;
-}
-.student-home-score.is-safe { background: rgba(0, 104, 95, .34); }
-.student-home-score.is-warning { background: rgba(255, 241, 201, .18); }
-.student-home-score small { color: #d8fff7; }
-.student-home-score.is-warning small { color: #ffe7a6; }
-.student-home-score strong { color: #ffffff; font-size: 10px; }
+.student-home-id-card > footer i { width: 54px; height: 22px; opacity: .7; background: repeating-linear-gradient(90deg,#fff 0 2px,transparent 2px 4px,#fff 4px 5px,transparent 5px 8px); }
 
 .student-id-view { position: fixed; z-index: 42; top: calc(64px + env(safe-area-inset-top, 0px)); right: max(0px, calc((100vw - 780px) / 2)); bottom: calc(64px + env(safe-area-inset-bottom, 0px)); left: max(0px, calc((100vw - 780px) / 2)); display: flex; padding: 22px; align-items: center; justify-content: center; flex-direction: column; background: rgba(8,18,42,.72); backdrop-filter: blur(16px); animation: student-id-view-in .2s ease-out; }
 .student-id-view__close { position: absolute; top: 16px; right: 16px; display: grid; width: 40px; height: 40px; border: 1px solid rgba(255,255,255,.18); border-radius: 13px; place-items: center; color: #fff; background: rgba(255,255,255,.1); cursor: pointer; }
@@ -2675,31 +2701,28 @@
 .student-home-no-class small { color: var(--student-secondary); font-size: 10px; }
 .student-home-no-class button { padding: 7px 9px; border: 0; border-radius: 9px; color: var(--student-primary); background: var(--student-primary-pale); font-size: 10px; font-weight: 700; }
 
-.student-home-kit > header,
 .student-home-overview > header,
 .student-home-schedule > header,
 .student-home-schedule-sheet > header,
 .student-home-diary > header { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .student-home-overview > header { padding: 0 3px 8px; }
-.student-home-kit > header { padding-bottom: 11px; }
-.student-home-kit > header > div,
 .student-home-overview > header > div,
 .student-home-schedule > header > div,
 .student-home-schedule-sheet > header > div,
 .student-home-diary > header > div { display: flex; flex-direction: column; }
-.student-home-kit header span,
 .student-home-overview header span,
 .student-home-schedule header span,
 .student-home-schedule-sheet header span,
 .student-home-diary header span { color: var(--student-secondary); font-size: 9px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; }
-.student-home-kit h2,
 .student-home-overview h2,
 .student-home-schedule h2,
 .student-home-schedule-sheet h2,
 .student-home-diary h2,
 .student-home-actions h2 { font-size: 16px; line-height: 21px; }
-.student-home-kit { padding: 15px; }
-.student-home-kit > header > strong { padding: 4px 8px; border-radius: 999px; color: var(--student-primary); background: var(--student-primary-pale); font-size: 10px; }
+.student-home-checklist-sheet > header { margin-bottom: 12px; }
+.student-home-checklist-sheet > header span { color: var(--student-secondary); font-size: 9px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; }
+.student-home-checklist-sheet > header h2 { font-size: 18px; line-height: 23px; }
+.student-home-checklist-sheet > header p { max-width: 310px; }
 .student-home-kit__list { display: grid; gap: 8px; }
 .student-home-kit__list button {
   display: grid;

@@ -6,14 +6,17 @@ import {
   BadgeCheck,
   BookOpenText,
   Bot,
+  CalendarCheck2,
   CalendarClock,
   Check,
   CheckCircle2,
   ChevronRight,
+  ClipboardCheck,
   Clock3,
   FileText,
   MapPin,
   PackageCheck,
+  Sparkles,
   X,
 } from "lucide-react";
 
@@ -132,6 +135,7 @@ export function StudentHomePage({ data }: { data: StudentHomeData }) {
   const navigate = useNavigate();
   const [idOpen, setIdOpen] = useState(false);
   const [scheduleOpen, setScheduleOpen] = useState(false);
+  const [kitOpen, setKitOpen] = useState(false);
   const [qrCodeUrl, setQrCodeUrl] = useState("");
   const periodRailRef = useRef<HTMLDivElement | null>(null);
   const periodCardRefs = useRef<Record<string, HTMLElement | null>>({});
@@ -154,6 +158,7 @@ export function StudentHomePage({ data }: { data: StudentHomeData }) {
     return data.schedule.filter((_, index) => Math.abs(index - focusIndex) <= 1);
   }, [data.schedule, focusPeriod]);
   const attendanceSafe = data.attendancePercent >= data.attendanceThreshold;
+  const attendanceScoreTone = attendanceSafe ? "is-safe" : "is-danger";
   const kitItems = useMemo(() => todaysKit(data.schedule), [data.schedule]);
   const packedCount = kitItems.filter((item) => checkedKit[item.id]).length;
   const qrPayload = useMemo(() => JSON.stringify({
@@ -207,13 +212,14 @@ export function StudentHomePage({ data }: { data: StudentHomeData }) {
   }, [focusPeriod, scheduleOpen]);
 
   useEffect(() => {
-    if (!scheduleOpen) return;
+    if (!scheduleOpen && !kitOpen) return;
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") setScheduleOpen(false);
+      if (event.key === "Escape") setKitOpen(false);
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [scheduleOpen]);
+  }, [kitOpen, scheduleOpen]);
 
   return (
     <StudentShell activeNav="home" section="Home" className={data.className} notificationCount={data.unreadNotifications}>
@@ -222,12 +228,19 @@ export function StudentHomePage({ data }: { data: StudentHomeData }) {
           <header><span>{data.dateLabel}</span><span><BadgeCheck size={14} /> Active student</span></header>
           <div className="student-home-id-card__identity">
             <span className="student-home-avatar" aria-hidden="true">{data.avatarUrl ? <img src={data.avatarUrl} alt="" /> : initials}</span>
-            <span><small>{greeting()}</small><h1 id="student-home-heading">{data.studentName}</h1><p>{data.className} • Roll {data.rollNumber}</p></span>
+            <span className="student-home-id-card__copy"><small>{greeting()}</small><h1 id="student-home-heading">{data.studentName}</h1><p>{data.className} • Roll {data.rollNumber}</p></span>
+            <span
+              className={`student-home-attendance-score ${attendanceScoreTone}`}
+              aria-label={`Attendance ${Math.round(data.attendancePercent)} percent`}
+            >
+              <strong>{Math.round(data.attendancePercent)}%</strong>
+              <small>Attendance</small>
+            </span>
           </div>
           <footer>
             <span><small>Student ID</small><strong>{data.studentId}</strong></span>
-            <span><small>Attendance score</small><strong>{data.attendancePercent.toFixed(1)}%</strong></span>
-            <span className={attendanceSafe ? "student-home-score is-safe" : "student-home-score is-warning"}><small>{attendanceSafe ? "Safe" : "Watch"}</small><strong>{attendanceSafe ? "Eligible" : "Needs care"}</strong></span>
+            <span><small>Academic term</small><strong>{data.termLabel}</strong></span>
+            <i aria-hidden="true" />
           </footer>
         </section>
 
@@ -294,27 +307,21 @@ export function StudentHomePage({ data }: { data: StudentHomeData }) {
           </section>
         )}
 
-        <section className="student-card student-home-kit" aria-labelledby="student-home-kit-heading">
-          <header>
-            <div><span>Today</span><h2 id="student-home-kit-heading">Today’s kit</h2></div>
-            <strong>{packedCount}/{kitItems.length}</strong>
-          </header>
-          <div className="student-home-kit__list">
-            {kitItems.map((item) => {
-              const checked = Boolean(checkedKit[item.id]);
-              return (
-                <button
-                  key={item.id}
-                  className={checked ? "is-checked" : ""}
-                  type="button"
-                  aria-pressed={checked}
-                  onClick={() => setCheckedKit((current) => ({ ...current, [item.id]: !current[item.id] }))}
-                >
-                  <span>{checked ? <Check size={16} /> : <PackageCheck size={16} />}</span>
-                  <span><strong>{item.label}</strong><small>{item.detail}</small></span>
-                </button>
-              );
-            })}
+        <section className="student-home-overview" aria-labelledby="student-home-overview-heading">
+          <header><div><h2 id="student-home-overview-heading">Your day at a glance</h2></div><b>Live</b></header>
+          <div>
+            <button type="button" onClick={() => navigate("/student/attendance")}>
+              <span className="tone-blue"><ClipboardCheck size={19} /></span><small>Attendance</small><strong>{data.attendancePercent.toFixed(1)}%</strong><em className={attendanceSafe ? "is-safe" : "is-warning"}>{attendanceSafe ? "Safe zone" : "Needs attention"}</em>
+            </button>
+            <button type="button" onClick={() => navigate("/student/timetable")}>
+              <span className="tone-violet"><CalendarClock size={19} /></span><small>Classes today</small><strong>{data.periodsToday}</strong><em>Published periods</em>
+            </button>
+            <button type="button" onClick={() => navigate("/student/leave")}>
+              <span className="tone-teal"><CalendarCheck2 size={19} /></span><small>Active leave</small><strong>{data.activeLeaveCount}</strong><em>{data.activeLeaveCount ? "Track approval" : "No requests"}</em>
+            </button>
+            <button type="button" onClick={() => setKitOpen(true)}>
+              <span className="tone-amber"><Sparkles size={19} /></span><small>Today checklist</small><strong>{packedCount}/{kitItems.length}</strong><em>{packedCount === kitItems.length ? "Ready for school" : "Tap to pack"}</em>
+            </button>
           </div>
         </section>
 
@@ -374,6 +381,46 @@ export function StudentHomePage({ data }: { data: StudentHomeData }) {
               <button className="student-home-schedule-sheet__timetable" type="button" onClick={() => navigate("/student/timetable")}>
                 Open weekly timetable <ArrowRight size={15} />
               </button>
+            </section>
+          </div>
+        ) : null}
+        {kitOpen ? (
+          <div className="student-sheet-backdrop" onClick={() => setKitOpen(false)}>
+            <section
+              className="student-sheet student-home-checklist-sheet"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="student-home-checklist-heading"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className="student-sheet__handle" />
+              <header>
+                <div>
+                  <span>Today</span>
+                  <h2 id="student-home-checklist-heading">Today checklist</h2>
+                  <p>{packedCount}/{kitItems.length} packed for {data.dateLabel}.</p>
+                </div>
+                <button className="student-icon-button" type="button" onClick={() => setKitOpen(false)} aria-label="Close today checklist">
+                  <X size={19} />
+                </button>
+              </header>
+              <div className="student-home-kit__list">
+                {kitItems.map((item) => {
+                  const checked = Boolean(checkedKit[item.id]);
+                  return (
+                    <button
+                      key={item.id}
+                      className={checked ? "is-checked" : ""}
+                      type="button"
+                      aria-pressed={checked}
+                      onClick={() => setCheckedKit((current) => ({ ...current, [item.id]: !current[item.id] }))}
+                    >
+                      <span>{checked ? <Check size={16} /> : <PackageCheck size={16} />}</span>
+                      <span><strong>{item.label}</strong><small>{item.detail}</small></span>
+                    </button>
+                  );
+                })}
+              </div>
             </section>
           </div>
         ) : null}
