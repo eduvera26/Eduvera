@@ -104,6 +104,30 @@ describe("implemented application routes", () => {
     expect(await screen.findByText("Overall Aggregate")).toBeVisible();
   });
 
+  it("switches the parent ID card across all accessible children and marks off-campus red", async () => {
+    const interact = userEvent.setup();
+    const original = apiFetchMock.getMockImplementation() as (path: string) => Promise<unknown>;
+    const first = (schoolApiFixture("/api/v1/students/") as { results: Array<{ id: string; user: { display_name: string }; admission_number: string }> }).results[0]!;
+    const second = { ...first, id: "student-2", admission_number: "CIS-002", user: { ...first.user, display_name: "Ananya Sharma" } };
+    const third = { ...first, id: "student-3", admission_number: "CIS-003", user: { ...first.user, display_name: "Rohan Sharma" } };
+    apiFetchMock.mockImplementation((path: string) => {
+      if (path === "/api/v1/students/") return Promise.resolve({ results: [first, second, third] });
+      if (path.startsWith("/api/v1/screens/parent/home/")) {
+        const selected = path.includes("student-2") ? second : path.includes("student-3") ? third : first;
+        return Promise.resolve({ ...(schoolApiFixture(path) as object), student: selected, siblings: [second, third], campus_presence: null });
+      }
+      return original(path);
+    });
+    render(<MemoryRouter initialEntries={["/parent/home"]}><App /></MemoryRouter>);
+    expect((await screen.findAllByText("Not on campus"))[0]).toBeVisible();
+    expect(document.querySelector(".presence-banner--away")).toBeInTheDocument();
+    await interact.click(await screen.findByRole("button", { name: "Switch to Ananya" }));
+    expect(await screen.findByRole("button", { name: /Open digital student ID for Ananya Sharma/ })).toBeVisible();
+    await interact.click(screen.getByRole("button", { name: "Switch to Rohan" }));
+    await interact.click(await screen.findByRole("button", { name: /Open digital student ID for Rohan Sharma/ }));
+    expect(screen.getByRole("dialog", { name: "Rohan Sharma" })).toHaveTextContent("CIS-003");
+  });
+
   it("renders the timetable as a weekly period chart without the old tab switcher", async () => {
     render(<MemoryRouter initialEntries={["/student/timetable"]}><App /></MemoryRouter>);
     expect(await screen.findByRole("heading", { name: "Weekly period chart" })).toBeVisible();

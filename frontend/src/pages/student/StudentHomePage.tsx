@@ -1,9 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { toDataURL } from "qrcode";
 import {
   ArrowRight,
-  BadgeCheck,
   BookOpenText,
   Bot,
   CalendarCheck2,
@@ -22,6 +20,7 @@ import {
 
 import { schoolClock } from "../../lib/schoolTime";
 import { StudentShell } from "./StudentShell";
+import { StudentIdentityCard } from "./StudentIdentityCard";
 import "./student-pages.css";
 
 export interface StudentHomePeriod {
@@ -133,15 +132,12 @@ function readKitState(storageKey: string): Record<string, boolean> {
 
 export function StudentHomePage({ data }: { data: StudentHomeData }) {
   const navigate = useNavigate();
-  const [idOpen, setIdOpen] = useState(false);
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [kitOpen, setKitOpen] = useState(false);
-  const [qrCodeUrl, setQrCodeUrl] = useState("");
   const periodRailRef = useRef<HTMLDivElement | null>(null);
   const periodCardRefs = useRef<Record<string, HTMLElement | null>>({});
   const scheduleListRef = useRef<HTMLDivElement | null>(null);
   const scheduleRowRefs = useRef<Record<string, HTMLElement | null>>({});
-  const initials = data.studentName.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase();
   const kitStorageKey = `omnischool.student.today-kit.${data.studentId}.${data.dateLabel}`;
   const [checkedKit, setCheckedKit] = useState(() => readKitState(kitStorageKey));
   const currentPeriod = useMemo(
@@ -165,32 +161,9 @@ export function StudentHomePage({ data }: { data: StudentHomeData }) {
       : "is-orange";
   const kitItems = useMemo(() => todaysKit(data.schedule), [data.schedule]);
   const packedCount = kitItems.filter((item) => checkedKit[item.id]).length;
-  const qrPayload = useMemo(() => JSON.stringify({
-    version: 1,
-    issuer: "Cambridge International School",
-    type: "student_identity",
-    studentId: data.studentId,
-    name: data.studentName,
-    class: data.className,
-    roll: data.rollNumber,
-    term: data.termLabel,
-  }), [data.className, data.rollNumber, data.studentId, data.studentName, data.termLabel]);
-
   useEffect(() => {
     window.localStorage.setItem(kitStorageKey, JSON.stringify(checkedKit));
   }, [checkedKit, kitStorageKey]);
-
-  useEffect(() => {
-    if (!idOpen || qrCodeUrl) return;
-    let active = true;
-    void toDataURL(qrPayload, {
-      errorCorrectionLevel: "H",
-      margin: 2,
-      width: 360,
-      color: { dark: "#103b86", light: "#ffffff" },
-    }).then((url) => { if (active) setQrCodeUrl(url); });
-    return () => { active = false; };
-  }, [idOpen, qrCodeUrl, qrPayload]);
 
   useLayoutEffect(() => {
     if (!focusPeriod) return;
@@ -228,39 +201,7 @@ export function StudentHomePage({ data }: { data: StudentHomeData }) {
   return (
     <StudentShell activeNav="home" section="Home" className={data.className} notificationCount={data.unreadNotifications}>
       <div className="student-page-stack student-home-page">
-        <section className="student-home-id-card" aria-label={`Open digital student ID for ${data.studentName}`} role="button" tabIndex={0} onClick={() => setIdOpen(true)} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); setIdOpen(true); } }}>
-          <header><span>{data.dateLabel}</span><span><BadgeCheck size={14} /> Active student</span></header>
-          <div className="student-home-id-card__identity">
-            <span className="student-home-avatar" aria-hidden="true">{data.avatarUrl ? <img src={data.avatarUrl} alt="" /> : initials}</span>
-            <span className="student-home-id-card__copy"><small>{greeting()}</small><h1 id="student-home-heading">{data.studentName}</h1><p>{data.className} • Roll {data.rollNumber}</p></span>
-            <span
-              className={`student-home-attendance-score ${attendanceScoreTone}`}
-              aria-label={`Attendance ${Math.round(data.attendancePercent)} percent`}
-            >
-              <strong>{Math.round(data.attendancePercent)}%</strong>
-              <small>Attendance</small>
-            </span>
-          </div>
-          <footer>
-            <span><small>Student ID</small><strong>{data.studentId}</strong></span>
-            <span><small>Academic term</small><strong>{data.termLabel}</strong></span>
-            <i aria-hidden="true" />
-          </footer>
-        </section>
-
-        {idOpen ? <div className="student-id-view" role="dialog" aria-modal="true" aria-labelledby="digital-student-id-heading">
-          <button className="student-id-view__close" type="button" onClick={() => setIdOpen(false)} aria-label="Close digital student ID"><X size={20} /></button>
-          <section className="student-id-view__card">
-            <header><span className="student-id-view__crest">CIS</span><span><strong>Cambridge International School</strong><small>Digital Student Identity</small></span><BadgeCheck size={22} /></header>
-            <div className="student-id-view__identity"><span>{data.avatarUrl ? <img src={data.avatarUrl} alt="" /> : initials}</span><div><small>Student name</small><h2 id="digital-student-id-heading">{data.studentName}</h2><p>{data.className} • Roll {data.rollNumber}</p></div></div>
-            <div className="student-id-view__details"><span><small>Admission number</small><strong>{data.studentId}</strong></span><span><small>Academic term</small><strong>{data.termLabel}</strong></span></div>
-            <div className="student-id-view__qr">
-              {qrCodeUrl ? <img src={qrCodeUrl} alt={`QR code for ${data.studentName}, student ID ${data.studentId}`} /> : <span aria-label="Generating identity QR code" />}
-              <span><small>Scan to verify school identity</small><strong>{data.studentId}</strong></span>
-            </div>
-          </section>
-          <p>Show this screen when your school asks for student identification.</p>
-        </div> : null}
+        <StudentIdentityCard identity={data} eyebrow={greeting()} />
 
         <section className={`student-home-presence ${data.presence.verified ? "is-verified" : ""}`} aria-label="Today's attendance status">
           <span className="student-home-presence__icon"><CheckCircle2 size={22} /></span>

@@ -2563,7 +2563,7 @@
 .student-home-id-card__identity { display: flex; margin-top: 17px; align-items: center; gap: 12px; }
 .student-home-id-card__copy { min-width: 0; flex: 1; }
 .student-home-id-card__identity small { color: #cbdcff; font-size: 9px; font-weight: 700; }
-.student-home-id-card__identity h1 { overflow: hidden; margin-top: 1px; font-size: 21px; line-height: 26px; letter-spacing: -.025em; white-space: nowrap; text-overflow: ellipsis; }
+.student-home-id-card__identity h1,.student-home-id-card__name { display: block; overflow: hidden; margin: 1px 0 0; font-size: 21px; line-height: 26px; letter-spacing: -.025em; white-space: nowrap; text-overflow: ellipsis; }
 .student-home-id-card__identity p { color: #dce7ff; font-size: 10px; }
 .student-home-id-card .student-home-avatar { width: 58px; height: 58px; border-radius: 17px; background: rgba(255,255,255,.18); box-shadow: 0 6px 16px rgba(5,31,92,.2); }
 .student-home-attendance-score {

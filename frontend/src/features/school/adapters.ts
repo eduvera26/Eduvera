@@ -196,6 +196,17 @@ export function adaptParentHome(response: ParentHomeResponse): ParentHomeData {
   const primaryContact = response.contacts.find((contact) => isHomeroomContact(contact.label));
   return {
     child,
+    idCard: {
+      studentName: child.name,
+      avatarUrl: child.avatarUrl,
+      className: response.student.current_enrollment.class_name,
+      rollNumber: child.rollNumber,
+      studentId: response.student.admission_number,
+      termLabel: `${response.student.current_enrollment.term.name} • ${response.student.current_enrollment.term.academic_year}`,
+      dateLabel: new Intl.DateTimeFormat("en-IN", { timeZone: "Asia/Kolkata", weekday: "long", day: "numeric", month: "long" }).format(new Date()),
+      attendancePercent: attendance,
+      attendanceThreshold: response.semester_metrics.attendance_threshold ?? 85,
+    },
     sibling: response.siblings[0]
       ? {
           id: response.siblings[0].id,

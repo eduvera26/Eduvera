@@ -12,6 +12,17 @@ export interface ParentChildSummary {
 
 export interface ParentHomeData {
   child: ParentChildSummary;
+  idCard: {
+    studentName: string;
+    avatarUrl?: string;
+    className: string;
+    rollNumber: string;
+    studentId: string;
+    termLabel: string;
+    dateLabel: string;
+    attendancePercent: number;
+    attendanceThreshold: number;
+  };
   sibling?: { id: string; name: string; grade: string; section: string };
   presence: { status: string; detail: string };
   pendingLeave?: {

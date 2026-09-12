@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   ArrowLeftRight,
@@ -16,6 +17,9 @@ import {
   Sigma,
 } from "lucide-react";
 import { fallbackHomeData } from "./parentDemoData";
+import { useOptionalAuth } from "../../features/auth/AuthContext";
+import { getAccessibleStudents } from "../../features/school/api";
+import { StudentIdentityCard } from "../student/StudentIdentityCard";
 import { ParentShell } from "./ParentShell";
 import type { ParentChildSummary, ParentHomeData, ParentPageAction } from "./parentTypes";
 import "./parent-pages.css";
@@ -73,6 +77,14 @@ export function ParentHomePage({
 }: ParentHomePageProps) {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const auth = useOptionalAuth();
+  const schoolName = auth?.memberships.find((membership) => membership.role === "guardian")?.school_name ?? "Cambridge International School";
+  const childrenQuery = useQuery({ queryKey: ["school", "accessible-students"], queryFn: getAccessibleStudents, staleTime: 60_000 });
+  const children = childrenQuery.data?.results.map((student) => ({ id: student.id, name: student.user.display_name })) ?? [];
+  const currentChildIndex = children.findIndex((student) => student.id === data.child.id);
+  const nextChild = children.length > 1
+    ? children[(currentChildIndex + 1) % children.length]
+    : data.sibling;
   const selectedStudentId = searchParams.get("student_id");
   const parentPath = (path: string) =>
     selectedStudentId ? `${path}${path.includes("?") ? "&" : "?"}student_id=${encodeURIComponent(selectedStudentId)}` : path;
@@ -93,6 +105,7 @@ export function ParentHomePage({
       active="home"
       pageLabel="Home"
       child={data.child}
+      presenceStatus={data.presence.status === "In School" ? "in" : "away"}
       onSelectChild={onSelectChild}
       childOptions={data.sibling ? [data.child, data.sibling] : [data.child]}
     >
@@ -107,14 +120,14 @@ export function ParentHomePage({
               </div>
               <p>{data.child.grade} • Section {data.child.section} • {data.child.board}</p>
             </div>
-            {data.sibling ? (
-              <button className="sibling-button" type="button" onClick={() => void onSelectChild?.(data.sibling!.id)}>
+            {nextChild && onSelectChild ? (
+              <button className="sibling-button" type="button" onClick={() => void onSelectChild(nextChild.id)}>
                 <ArrowLeftRight size={17} />
-                <span>{data.sibling.name}</span>
+                <span>{nextChild.name.split(" ")[0] ?? nextChild.name}</span>
               </button>
             ) : null}
           </div>
-          <div className="presence-banner">
+          <div className={data.presence.status === "In School" ? "presence-banner" : "presence-banner presence-banner--away"}>
             <span className="live-indicator"><span /></span>
             <strong>{data.presence.status}</strong>
             <span className="dot-divider">•</span>
@@ -122,6 +135,8 @@ export function ParentHomePage({
             <ShieldCheck size={17} />
           </div>
         </section>
+
+        <StudentIdentityCard key={data.child.id} identity={data.idCard} schoolName={schoolName} primaryHeading={false} switchChild={nextChild && onSelectChild ? { name: nextChild.name.split(" ")[0] ?? nextChild.name, onSelect: () => void onSelectChild(nextChild.id) } : undefined} />
 
         <section className="home-action-section" aria-labelledby="action-required-heading">
           <div className="section-eyebrow-row">
@@ -145,12 +160,12 @@ export function ParentHomePage({
                     <span className="time-label">{pendingLeave.submittedLabel}</span>
                   </div>
                   <p>{pendingLeave.summary} • <strong>{pendingLeave.durationLabel}</strong></p>
-                  <div className="button-row">
-                    <button className="button button--primary button--grow" type="button" onClick={() => openLeaveReview()}>
-                      <CheckCircle2 size={17} />Review & Sign
-                    </button>
-                    <button className="button button--soft" type="button" onClick={() => openLeaveReview(true)}>Ask clarification</button>
-                  </div>
+                </div>
+                <div className="button-row urgent-leave-card__actions">
+                  <button className="button button--primary button--grow" type="button" onClick={() => openLeaveReview()}>
+                    <CheckCircle2 size={17} /><span>Review &amp; Sign</span>
+                  </button>
+                  <button className="button button--soft" type="button" onClick={() => openLeaveReview(true)}>Ask clarification</button>
                 </div>
               </div>
             )}
@@ -165,7 +180,7 @@ export function ParentHomePage({
         <section className="surface-card pulse-card" aria-labelledby="pulse-heading">
           <div className="card-heading-row">
             <h2 id="pulse-heading"><Clock3 size={20} />Academic Pulse</h2>
-            <span className={data.presence.status === "In School" ? "status-pill status-pill--success" : "status-pill"}><CheckCircle2 size={14} />{data.presence.status}</span>
+            <span className={data.presence.status === "In School" ? "status-pill status-pill--success" : "status-pill status-pill--danger"}><CheckCircle2 size={14} />{data.presence.status}</span>
           </div>
           {currentPeriod ? <div className="current-period">
             <div className="current-period__meta">

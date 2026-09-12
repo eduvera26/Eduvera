@@ -39,6 +39,7 @@ export interface ParentShellProps {
   children: ReactNode;
   onSelectChild?: (childId: string) => ParentPageAction;
   childOptions?: Array<{ id: string; name: string; grade: string; section: string }>;
+  presenceStatus?: "in" | "away";
 }
 
 export function ParentShell({
@@ -48,9 +49,11 @@ export function ParentShell({
   children,
   onSelectChild,
   childOptions,
+  presenceStatus,
 }: ParentShellProps) {
   const auth = useOptionalAuth();
   const schoolName = auth?.memberships.find((membership) => membership.role === "guardian")?.school_name ?? "Cambridge International School";
+  const schoolCrest = schoolName.split(/\s+/).filter(Boolean).map((word) => word[0]).join("").slice(0, 3).toUpperCase();
   const [searchParams] = useSearchParams();
   const selectedStudentId = searchParams.get("student_id");
   const [selectorOpen, setSelectorOpen] = useState(false);
@@ -65,9 +68,9 @@ export function ParentShell({
     grade: `Grade ${student.current_enrollment.grade}`,
     section: student.current_enrollment.section,
   }));
-  const selectableChildren = childOptions?.length
-    ? childOptions
-    : accessibleChildren?.length ? accessibleChildren : [child];
+  const selectableChildren = accessibleChildren?.length
+    ? accessibleChildren
+    : childOptions?.length ? childOptions : [child];
 
   const chooseChild = async (childId: string) => {
     await onSelectChild?.(childId);
@@ -79,7 +82,7 @@ export function ParentShell({
       <header className="parent-header">
         <div className="parent-header__top">
           <div className="parent-brand" aria-label={schoolName}>
-            <span className="parent-brand__dot" />
+            <span className="parent-brand__crest" aria-hidden="true">{schoolCrest}</span>
             <span className="parent-brand__name">{schoolName}</span>
           </div>
           <div className="parent-header__actions">
@@ -96,7 +99,7 @@ export function ParentShell({
               aria-haspopup={selectableChildren.length > 1 ? "listbox" : undefined}
               onClick={() => selectableChildren.length > 1 && setSelectorOpen((current) => !current)}
             >
-              <span className="presence-dot" />
+              <span className={presenceStatus === "in" ? "presence-dot presence-dot--in" : presenceStatus === "away" ? "presence-dot presence-dot--away" : "presence-dot"} />
               <span>{child.name} • Class {child.grade.replace("Grade ", "")}{child.section}</span>
               {selectableChildren.length > 1 ? <ChevronDown size={15} /> : null}
             </button>
