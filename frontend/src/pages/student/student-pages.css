@@ -2581,8 +2581,9 @@
   box-shadow: 0 8px 18px rgba(5,31,92,.14);
   text-align: center;
 }
-.student-home-attendance-score.is-safe { background: rgba(255, 255, 255, .12); }
-.student-home-attendance-score.is-danger { background: rgba(255, 180, 180, .16); }
+.student-home-attendance-score.is-green { color: #075e45; background: #dcfce7; }
+.student-home-attendance-score.is-yellow { color: #714400; background: #fff1ba; }
+.student-home-attendance-score.is-orange { color: #8c330a; background: #ffdfc2; }
 .student-home-attendance-score strong {
   display: block;
   font-size: 25px;
@@ -2594,7 +2595,7 @@
   display: block;
   max-width: 100%;
   overflow: hidden;
-  color: rgba(255,255,255,.86);
+  color: inherit;
   font-size: 7px;
   line-height: 9px;
   font-weight: 800;
@@ -2782,6 +2783,9 @@
 .student-home-overview .tone-amber { color: #7a4d00; background: #fff0cf; }
 .student-home-overview small { align-self: end; color: var(--student-secondary); font-size: 10px; font-weight: 700; }
 .student-home-overview strong { font-size: 21px; line-height: 25px; letter-spacing: -.035em; }
+.student-home-overview strong.is-green { color: #08724f; }
+.student-home-overview strong.is-yellow { color: #956000; }
+.student-home-overview strong.is-orange { color: #b3440d; }
 .student-home-overview em { color: var(--student-secondary); font-size: 9px; font-style: normal; }
 .student-home-overview em.is-safe { color: var(--student-teal); font-weight: 700; }
 .student-home-overview em.is-warning { color: var(--student-error); font-weight: 700; }
