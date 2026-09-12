@@ -3,7 +3,8 @@
 
 Creates the Railway project, one service that runs backend/Dockerfile (serving
 the mobile app, the desktop dashboard and the API from one origin), pins it to
-Singapore, gives it a public domain and an uploads volume, sets its variables,
+Singapore (Railway's config-as-code file is deprecated, so this script is the
+infrastructure definition), gives it a public domain and an uploads volume, sets its variables,
 and stores what GitHub Actions needs (RAILWAY_TOKEN secret, STAGE_URL variable)
 so pushes to Stage deploy automatically.
 
@@ -113,15 +114,26 @@ def find_or_create_service(project_id: str) -> str:
     return data["serviceCreate"]["id"]
 
 
-def pin_region(service_id: str, env_id: str) -> None:
-    try:
-        gql(
-            """mutation($s: String!, $e: String!, $input: ServiceInstanceUpdateInput!) { serviceInstanceUpdate(serviceId: $s, environmentId: $e, input: $input) }""",
-            {"s": service_id, "e": env_id, "input": {"region": REGION, "healthcheckPath": "/readyz", "healthcheckTimeout": 180}},
-        )
-        print(f"region pinned: {REGION}")
-    except RuntimeError as e:
-        print(f"could not pin region automatically ({e.splitlines()[0][:80]}); set Singapore in the dashboard")
+def configure_service(service_id: str, env_id: str) -> None:
+    """Region, Dockerfile and health check live on the service instance.
+    railway.json config-as-code is deprecated, so this is the source of truth."""
+    settings = {
+        "multiRegionConfig": {REGION: {"numReplicas": 1}},   # a JSON scalar: keys are region ids
+        "dockerfilePath": "backend/Dockerfile",              # setting this selects the Docker builder
+        "healthcheckPath": "/readyz",
+        "healthcheckTimeout": 180,
+        "restartPolicyType": "ON_FAILURE",
+        "restartPolicyMaxRetries": 5,
+    }
+    for key, value in settings.items():
+        try:
+            gql(
+                """mutation($s: String!, $e: String!, $input: ServiceInstanceUpdateInput!) { serviceInstanceUpdate(serviceId: $s, environmentId: $e, input: $input) }""",
+                {"s": service_id, "e": env_id, "input": {key: value}},
+            )
+        except RuntimeError as e:
+            print(f"could not set {key} ({e.splitlines()[0][:90]})")
+    print(f"service configured: region {REGION}, backend/Dockerfile, /readyz")
 
 
 def ensure_domain(project_id: str, service_id: str, env_id: str) -> str:
@@ -206,7 +218,7 @@ def store_in_github(token: str, public_url: str) -> None:
 def main() -> None:
     project_id, env_id = find_or_create_project()
     service_id = find_or_create_service(project_id)
-    pin_region(service_id, env_id)
+    configure_service(service_id, env_id)
     domain = ensure_domain(project_id, service_id, env_id)
     public_url = f"https://{domain}"
     ensure_volume(project_id, service_id, env_id)
