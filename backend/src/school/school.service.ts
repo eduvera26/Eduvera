@@ -163,8 +163,8 @@ export class SchoolService {
     return enrollment;
   }
 
-  async studentDto(student: StudentContext) {
-    const enrollment = await this.enrollment(student.id);
+  async studentDto(student: StudentContext, knownEnrollment?: EnrollmentContext) {
+    const enrollment = knownEnrollment ?? await this.enrollment(student.id);
     return {
       id: student.id,
       user: {
@@ -437,14 +437,16 @@ export class SchoolService {
     `.execute(this.db);
     const row = result.rows[0];
     if (!row) throw new NotFoundException("Leave request not found.");
-    const documents = await this.db.selectFrom("leave_documents").selectAll()
-      .where("leave_request_id", "=", leaveId).orderBy("created_at").execute();
-    const audits = await sql<any>`
-      SELECT la.*, u.first_name, u.last_name FROM leave_audits la JOIN users u ON u.id=la.actor_id
-      WHERE la.leave_request_id=${leaveId}::uuid ORDER BY la.created_at,
-        CASE la.action WHEN 'submitted' THEN 0 WHEN 'document_added' THEN 1 WHEN 'clarification_requested' THEN 2 WHEN 'authorized' THEN 3 WHEN 'declined' THEN 3 WHEN 'approved' THEN 4 WHEN 'rejected' THEN 4 WHEN 'withdrawn' THEN 5 ELSE 9 END,
-        la.id
-    `.execute(this.db);
+    const [documents, audits] = await Promise.all([
+      this.db.selectFrom("leave_documents").selectAll()
+        .where("leave_request_id", "=", leaveId).orderBy("created_at").execute(),
+      sql<any>`
+        SELECT la.*, u.first_name, u.last_name FROM leave_audits la JOIN users u ON u.id=la.actor_id
+        WHERE la.leave_request_id=${leaveId}::uuid ORDER BY la.created_at,
+          CASE la.action WHEN 'submitted' THEN 0 WHEN 'document_added' THEN 1 WHEN 'clarification_requested' THEN 2 WHEN 'authorized' THEN 3 WHEN 'declined' THEN 3 WHEN 'approved' THEN 4 WHEN 'rejected' THEN 4 WHEN 'withdrawn' THEN 5 ELSE 9 END,
+          la.id
+      `.execute(this.db),
+    ]);
     const origin = request ? `${request.protocol}://${request.headers.host}` : "";
     return {
       id: row.id, student_id: row.student_id, term_id: row.term_id,
@@ -729,9 +731,8 @@ export class SchoolService {
 
   async parentHome(user: AuthUser, studentId?: string) {
     const student = await this.studentForUser(user, studentId);
-    await this.requireRole(user, student, "guardian");
-    const enrollment = await this.enrollment(student.id);
-    const [summary, campus, schedule, diary, contacts, siblings, unread, pending] = await Promise.all([
+    const [, enrollment] = await Promise.all([this.requireRole(user, student, "guardian"), this.enrollment(student.id)]);
+    const [summary, campus, schedule, diary, contacts, siblings, unread, pending, homework] = await Promise.all([
       this.attendanceSummary(student.id, enrollment),
       this.latestGate(student.id, today()),
       this.timetable(enrollment, isoWeekday(today())),
@@ -740,14 +741,15 @@ export class SchoolService {
       this.accessibleStudentDtos(user),
       this.db.selectFrom("notifications").select(sql<string>`count(*)::text`.as("count")).where("recipient_id", "=", user.id).where("read_at", "is", null).executeTakeFirst(),
       this.db.selectFrom("leave_requests").select("id").where("student_id", "=", student.id).where("status", "=", "pending_guardian").orderBy("created_at", "desc").executeTakeFirst(),
+      this.db.selectFrom("diary_items").select(sql<string>`count(*)::text`.as("count"))
+        .where("class_section_id", "=", enrollment.class_section_id).where("term_id", "=", enrollment.term_id)
+        .where("item_type", "=", "homework").where("due_at", ">=", new Date()).executeTakeFirst(),
     ]);
-    const homework = await this.db.selectFrom("diary_items").select(sql<string>`count(*)::text`.as("count"))
-      .where("class_section_id", "=", enrollment.class_section_id).where("term_id", "=", enrollment.term_id)
-      .where("item_type", "=", "homework").where("due_at", ">=", new Date()).executeTakeFirst();
+    const actionRequired = pending ? await this.leaveDto(pending.id) : null;
     return {
-      student: await this.studentDto(student), siblings: siblings.filter((item) => item.id !== student.id),
+      student: await this.studentDto(student, enrollment), siblings: siblings.filter((item) => item.id !== student.id),
       campus_presence: campus, attendance: summary,
-      action_required: pending ? await this.leaveDto(pending.id) : null,
+      action_required: actionRequired,
       today_schedule: schedule, diary_preview: diary.slice(0, 3), unread_notifications: Number(unread?.count ?? 0),
       semester_metrics: {
         attendance_percentage: summary.percentage,
@@ -763,21 +765,23 @@ export class SchoolService {
 
   async parentAttendance(user: AuthUser, studentId?: string) {
     const student = await this.studentForUser(user, studentId);
-    await this.requireRole(user, student, "guardian");
-    const enrollment = await this.enrollment(student.id);
-    const [records, schedule] = await Promise.all([
+    const [, enrollment] = await Promise.all([this.requireRole(user, student, "guardian"), this.enrollment(student.id)]);
+    const [records, schedule, summary, latestGate, contacts] = await Promise.all([
       this.attendanceRecords(student.id, enrollment),
       this.timetable(enrollment, isoWeekday(today())),
+      this.attendanceSummary(student.id, enrollment),
+      this.latestGate(student.id, today()),
+      this.contacts(student.school_id),
     ]);
     return {
-      student: await this.studentDto(student),
+      student: await this.studentDto(student, enrollment),
       term: { id: enrollment.term_id, name: enrollment.term_name, academic_year: enrollment.academic_year, threshold: enrollment.attendance_threshold },
-      summary: await this.attendanceSummary(student.id, enrollment),
+      summary,
       today: records.find((row) => row.date === today()) ?? null,
-      latest_gate_event: await this.latestGate(student.id, today()),
+      latest_gate_event: latestGate,
       expected_dismissal_at: schedule.at(-1)?.ends_at ?? null,
       calendar: records,
-      contacts: await this.contacts(student.school_id),
+      contacts,
     };
   }
 
@@ -815,15 +819,14 @@ export class SchoolService {
 
   async studentAttendanceScreen(user: AuthUser, studentId?: string) {
     const student = await this.studentForUser(user, studentId);
-    await this.requireRole(user, student, "student");
-    const enrollment = await this.enrollment(student.id);
+    const [, enrollment] = await Promise.all([this.requireRole(user, student, "student"), this.enrollment(student.id)]);
     const [summary, subjects, ranking] = await Promise.all([
       this.attendanceSummary(student.id, enrollment),
       this.subjectAttendance(student.id, enrollment.term_id),
       this.classAttendanceRanking(student.id, enrollment),
     ]);
     return {
-      student: await this.studentDto(student),
+      student: await this.studentDto(student, enrollment),
       term: { id: enrollment.term_id, name: enrollment.term_name, academic_year: enrollment.academic_year, threshold: enrollment.attendance_threshold },
       summary,
       subjects,
@@ -833,8 +836,7 @@ export class SchoolService {
 
   async studentHomeScreen(user: AuthUser, studentId?: string) {
     const student = await this.studentForUser(user, studentId);
-    await this.requireRole(user, student, "student");
-    const enrollment = await this.enrollment(student.id);
+    const [, enrollment] = await Promise.all([this.requireRole(user, student, "student"), this.enrollment(student.id)]);
     const schoolDate = today();
     const [attendance, records, campus, schedule, diary, activeLeaves, unread] = await Promise.all([
       this.attendanceSummary(student.id, enrollment),
@@ -848,7 +850,7 @@ export class SchoolService {
         .where("recipient_id", "=", user.id).where("read_at", "is", null).executeTakeFirst(),
     ]);
     return {
-      student: await this.studentDto(student),
+      student: await this.studentDto(student, enrollment),
       term: {
         id: enrollment.term_id,
         name: enrollment.term_name,

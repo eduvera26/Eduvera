@@ -28,6 +28,8 @@ const schema = z.object({
   OPENAI_MODEL: z.string().default("gpt-5-mini"),
   AI_TIMEOUT_MS: z.coerce.number().int().min(1000).max(120000).default(20000),
   LOG_LEVEL: z.string().default("info"),
+  // "postgres" shares buckets across API instances; "memory" costs nothing per request.
+  RATE_LIMIT_STORE: z.enum(["postgres", "memory"]).optional(),
 });
 
 export type AppConfig = ReturnType<typeof loadConfig>;
@@ -39,6 +41,7 @@ export function loadConfig() {
   }
   return {
     ...value,
+    rateLimitStore: value.RATE_LIMIT_STORE ?? (value.NODE_ENV === "production" ? "postgres" : "memory"),
     allowedOrigins: value.ALLOWED_ORIGINS.split(",").map((origin) => origin.trim()).filter(Boolean),
     spaDistDir: resolve(process.cwd(), value.SPA_DIST_DIR),
     uploadDir: resolve(process.cwd(), value.UPLOAD_DIR),

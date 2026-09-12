@@ -40,14 +40,30 @@ export class AuthService {
     return createHash("sha256").update(raw).digest("hex");
   }
 
+  private sweepTimer?: ReturnType<typeof setInterval>;
+  private lastSweepAt = 0;
+
+  // Expired sessions are already rejected on lookup below; the DELETE only reclaims rows,
+  // so it runs on a timer instead of on every request.
+  private scheduleSessionSweep(): void {
+    if (this.sweepTimer) return;
+    const sweep = async () => {
+      this.lastSweepAt = Date.now();
+      await this.db.deleteFrom("auth_sessions").where("expires_at", "<", new Date()).execute().catch(() => undefined);
+    };
+    this.sweepTimer = setInterval(() => { void sweep(); }, 5 * 60_000);
+    this.sweepTimer.unref();
+    if (Date.now() - this.lastSweepAt > 5 * 60_000) void sweep();
+  }
+
   async resolveSession(rawToken: string | undefined): Promise<SessionIdentity | null> {
-    await this.db.deleteFrom("auth_sessions").where("expires_at", "<", new Date()).execute();
+    this.scheduleSessionSweep();
     if (!rawToken) return null;
     const tokenHash = AuthService.tokenHash(rawToken);
     const row = await this.db.selectFrom("auth_sessions as s")
       .innerJoin("users as u", "u.id", "s.user_id")
       .select([
-        "s.token_hash", "s.csrf_token", "s.expires_at",
+        "s.token_hash", "s.csrf_token", "s.expires_at", "s.last_seen_at",
         "u.id", "u.username", "u.email", "u.first_name", "u.last_name", "u.role", "u.is_active",
       ])
       .where("s.token_hash", "=", tokenHash).executeTakeFirst();
@@ -56,8 +72,12 @@ export class AuthService {
       await this.db.deleteFrom("auth_sessions").where("token_hash", "=", tokenHash).execute();
       return null;
     }
-    await this.db.updateTable("auth_sessions").set({ last_seen_at: new Date() })
-      .where("token_hash", "=", tokenHash).execute();
+    // last_seen_at is informational; write it at most once a minute per session.
+    const lastSeen = row.last_seen_at ? new Date(row.last_seen_at).getTime() : 0;
+    if (Date.now() - lastSeen > 60_000) {
+      await this.db.updateTable("auth_sessions").set({ last_seen_at: new Date() })
+        .where("token_hash", "=", tokenHash).execute();
+    }
     return {
       tokenHash,
       csrfToken: row.csrf_token,
