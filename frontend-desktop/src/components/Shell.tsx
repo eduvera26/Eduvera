@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { normaliseNotifications, staffApi } from "../features/staff";
 import { useAuth, type Persona } from "../lib/auth";
-import { Initials } from "./ui";
 
 interface NavItem { to: string; label: string; icon: typeof LayoutGrid; personas: Persona[] }
 
@@ -46,22 +45,22 @@ export function Shell() {
   return (
     <div className="app">
       <aside className="side">
-        <div style={{ padding: "0 18px 4px", display: "flex", flexDirection: "column", gap: 12 }}>
-          <div style={{ fontSize: 17, letterSpacing: ".14em", fontWeight: 700 }}>OMNISCHOOL</div>
-          <div style={{ border: "1px solid var(--line)", borderRadius: 6, padding: "8px 10px" }}>
-            <div style={{ fontSize: 12.5, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{school?.school_name ?? "—"}</div>
-            <div style={{ fontSize: 11, color: "var(--faint)" }}>{persona ? AREA_LABEL[persona] : ""} · desktop</div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          <div className="brand"><span className="dot" /><span className="name">{school?.school_name ?? "OmniSchool"}</span></div>
+          <div className="school-chip">
+            <div className="lbl">{persona ? AREA_LABEL[persona] : ""} portal</div>
+            <div style={{ fontSize: 13, fontWeight: 600, marginTop: 3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{user?.display_name}</div>
           </div>
         </div>
 
         <nav className="grp" aria-label="Main">
-          <div className="lbl" style={{ padding: "0 10px 6px" }}>Authorized tools</div>
+          <div className="lbl" style={{ padding: "0 12px 8px" }}>Authorized tools</div>
           {items.map((n) => {
             const Icon = n.icon;
             const badge = n.to === "/notifications" && unread.data ? <span className="badge" style={{ color: "var(--cri)", background: "var(--cri-bg)" }}>{unread.data}</span> : null;
             return (
               <NavLink key={n.to} to={n.to} end={n.to === "/"} className="nav-i">
-                <Icon size={16} strokeWidth={1.8} /><span>{n.label}</span>{badge}
+                <Icon size={17} strokeWidth={2} /><span>{n.label}</span>{badge}
               </NavLink>
             );
           })}
@@ -69,28 +68,28 @@ export function Shell() {
 
         {persona === "teacher" ? (
           <div className="grp" style={{ marginTop: "auto" }}>
-            <div className="lbl" style={{ padding: "0 10px 6px" }}>Not available to you</div>
-            <div className="nav-i" style={{ opacity: .45 }} aria-disabled="true"><CalendarDays size={16} strokeWidth={1.8} /><span>Timetable</span></div>
+            <div className="lbl" style={{ padding: "0 12px 8px" }}>Not available to you</div>
+            <div className="nav-i" style={{ opacity: .45 }} aria-disabled="true"><CalendarDays size={17} strokeWidth={2} /><span>Timetable</span></div>
           </div>
         ) : null}
 
-        <div style={{ marginTop: persona === "teacher" ? 0 : "auto", padding: "14px 18px 0", borderTop: "1px solid var(--line-3)", display: "flex", alignItems: "center", gap: 10 }}>
-          <Initials name={user?.display_name ?? "?"} src={user?.avatar_url} />
+        <div style={{ marginTop: persona === "teacher" ? 0 : "auto", padding: "14px 22px 0", borderTop: "1px solid var(--line-3)", display: "flex", alignItems: "center", gap: 10 }}>
+          <div className="av" style={{ width: 38, height: 38, background: "var(--brand-hover)", color: "#fff", fontSize: 12 }}>{(user?.display_name ?? "?").split(" ").map((p) => p[0]).join("").slice(0, 2).toUpperCase()}</div>
           <div style={{ minWidth: 0 }}>
-            <div style={{ fontSize: 12.5, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{user?.display_name}</div>
-            <div style={{ fontSize: 11, color: "var(--faint)" }}>{persona ? PERSONA_LABEL[persona] : ""}</div>
+            <div style={{ fontSize: 13, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{user?.display_name}</div>
+            <div className="lbl" style={{ marginTop: 2 }}>{persona ? PERSONA_LABEL[persona] : ""}</div>
           </div>
-          <button className="btn sm" style={{ marginLeft: "auto", padding: 6 }} onClick={() => void logout()} aria-label="Sign out" title="Sign out"><LogOut size={14} /></button>
+          <button className="btn ghost sm" style={{ marginLeft: "auto", width: 36, minHeight: 36, padding: 0, borderRadius: 999 }} onClick={() => void logout()} aria-label="Sign out" title="Sign out"><LogOut size={16} /></button>
         </div>
       </aside>
 
       <div className="main">
         <div className="topbar">
-          <div style={{ fontSize: 13, color: "var(--muted)", fontWeight: 500 }}>{current?.label ?? "OmniSchool"}</div>
-          {demoMode ? <span className="st neu" style={{ fontSize: 11 }}>Demo data</span> : null}
-          <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 10 }}>
-            <span className="faint" style={{ fontSize: 12 }}>{Intl.DateTimeFormat().resolvedOptions().timeZone}</span>
-            <button className="btn sm" onClick={toggle} aria-label="Toggle theme" style={{ padding: 6 }}>{isDark ? <Sun size={14} /> : <Moon size={14} />}</button>
+          <div className="lbl">{current?.label ?? "OmniSchool"}</div>
+          {demoMode ? <span className="st neu">Demo data</span> : null}
+          <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8 }}>
+            <span className="lbl" style={{ color: "var(--faint)" }}>{Intl.DateTimeFormat().resolvedOptions().timeZone}</span>
+            <button className="btn ghost sm" onClick={toggle} aria-label="Toggle theme" style={{ width: 42, minHeight: 42, padding: 0, borderRadius: 999 }}>{isDark ? <Sun size={17} /> : <Moon size={17} />}</button>
           </div>
         </div>
         <div className="body"><Outlet /></div>

@@ -24,9 +24,9 @@ export function LoginPage() {
 
   return (
     <div style={{ minHeight: "100vh", display: "grid", placeItems: "center", padding: 24 }}>
-      <form onSubmit={submit} className="card" style={{ width: "min(400px, 100%)", padding: 28, display: "flex", flexDirection: "column", gap: 18 }}>
+      <form onSubmit={submit} className="card" style={{ width: "min(420px, 100%)", padding: 30, display: "flex", flexDirection: "column", gap: 18, borderRadius: "var(--r-lg)", boxShadow: "var(--shadow-float)" }}>
         <div>
-          <div style={{ fontSize: 15, letterSpacing: ".14em", fontWeight: 700 }}>OMNISCHOOL</div>
+          <div className="brand" style={{ padding: 0 }}><span className="dot" /><span className="name">OmniSchool</span></div>
           <h1 className="dsp" style={{ marginTop: 10 }}>Sign in</h1>
           <p className="muted" style={{ fontSize: 13.5, marginTop: 6 }}>Principals, teachers, guardians and students all sign in here. What you see is decided by your school membership.</p>
         </div>
