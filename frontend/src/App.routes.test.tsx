@@ -124,7 +124,7 @@ describe("implemented application routes", () => {
     expect(document.querySelector(".status-pill--danger")).toBeInTheDocument();
     expect(document.querySelector(".child-status-card")).not.toBeInTheDocument();
     const switchToAnanya = await screen.findByRole("button", { name: "Switch to Ananya" });
-    expect(document.querySelector(".parent-id-stack.has-three-or-more")).toBeInTheDocument();
+    await waitFor(() => expect(document.querySelector(".parent-id-stack.has-three-or-more")).toBeInTheDocument());
     await interact.click(switchToAnanya);
     await waitFor(() => expect(document.querySelector(".parent-id-stack.is-animating.direction-left")).toBeInTheDocument());
     expect(document.querySelector(".parent-id-stack__incoming")).toHaveTextContent("Ananya Sharma");
@@ -146,6 +146,53 @@ describe("implemented application routes", () => {
     await interact.click(await screen.findByRole("button", { name: /Open digital student ID for Rohan Sharma/ }));
     expect(screen.getByRole("dialog", { name: "Rohan Sharma" })).toHaveTextContent("CIS-003");
   }, 12000);
+
+  it("cycles a four-child card deck in both directions, including wraparound", async () => {
+    const original = apiFetchMock.getMockImplementation() as (path: string) => Promise<unknown>;
+    const first = (schoolApiFixture("/api/v1/students/") as { results: Array<{ id: string; user: { display_name: string }; admission_number: string }> }).results[0]!;
+    const children = [
+      first,
+      ...(["Ananya", "Rohan", "Kavya"] as const).map((name, index) => ({
+        ...first,
+        id: `student-${index + 2}`,
+        admission_number: `CIS-00${index + 2}`,
+        user: { ...first.user, display_name: `${name} Sharma` },
+      })),
+    ];
+    apiFetchMock.mockImplementation((path: string) => {
+      if (path === "/api/v1/students/") return Promise.resolve({ results: children });
+      if (path.startsWith("/api/v1/screens/parent/home/")) {
+        const selected = children.find((child) => path.includes(child.id)) ?? first;
+        return Promise.resolve({ ...(schoolApiFixture(path) as object), student: selected, siblings: children.filter((child) => child.id !== selected.id) });
+      }
+      return original(path);
+    });
+    render(<MemoryRouter initialEntries={["/parent/home"]}><App /></MemoryRouter>);
+
+    const swipe = async (from: string, to: string, direction: "left" | "right") => {
+      const card = await screen.findByRole("button", { name: new RegExp(`^Open digital student ID for ${from} Sharma`) });
+      await waitFor(() => expect(card).toBeEnabled());
+      const startX = direction === "right" ? 80 : 220;
+      const endX = direction === "right" ? 220 : 80;
+      fireEvent.touchStart(card, { touches: [{ clientX: startX, clientY: 100 }] });
+      fireEvent.touchEnd(card, { changedTouches: [{ clientX: endX, clientY: 100 }] });
+      await waitFor(() => expect(document.querySelector(`.parent-id-stack.is-animating.direction-${direction}`)).toBeInTheDocument());
+      expect(document.querySelector(".parent-id-stack__incoming")).toHaveTextContent(`${to} Sharma`);
+      await screen.findByRole("button", { name: new RegExp(`^Open digital student ID for ${to} Sharma`) });
+      await waitFor(() => expect(document.querySelector(".parent-id-stack.is-animating")).not.toBeInTheDocument());
+    };
+
+    expect(await screen.findByRole("button", { name: /^Open digital student ID for Aarav Sharma/ })).toBeVisible();
+    await waitFor(() => expect(document.querySelector(".parent-id-stack.has-three-or-more")).toBeInTheDocument());
+    await swipe("Aarav", "Kavya", "right");
+    await swipe("Kavya", "Rohan", "right");
+    await swipe("Rohan", "Ananya", "right");
+    await swipe("Ananya", "Aarav", "right");
+    await swipe("Aarav", "Ananya", "left");
+    await swipe("Ananya", "Rohan", "left");
+    await swipe("Rohan", "Kavya", "left");
+    await swipe("Kavya", "Aarav", "left");
+  }, 40000);
 
   it("renders the timetable as a weekly period chart without the old tab switcher", async () => {
     render(<MemoryRouter initialEntries={["/student/timetable"]}><App /></MemoryRouter>);
