@@ -2570,20 +2570,15 @@
   display: flex;
   width: 74px;
   min-height: 58px;
-  padding: 8px 7px;
   flex: 0 0 auto;
   align-items: center;
   justify-content: center;
   flex-direction: column;
-  border-radius: 18px;
-  color: #ffffff;
-  background: rgba(255, 255, 255, .12);
-  box-shadow: 0 8px 18px rgba(5,31,92,.14);
   text-align: center;
 }
-.student-home-attendance-score.is-green { color: #075e45; background: #dcfce7; }
-.student-home-attendance-score.is-yellow { color: #714400; background: #fff1ba; }
-.student-home-attendance-score.is-orange { color: #8c330a; background: #ffdfc2; }
+.student-home-attendance-score.is-green strong { color: #a4f7ce; }
+.student-home-attendance-score.is-yellow strong { color: #ffe27a; }
+.student-home-attendance-score.is-orange strong { color: #ffbe90; }
 .student-home-attendance-score strong {
   display: block;
   font-size: 25px;
@@ -2595,7 +2590,7 @@
   display: block;
   max-width: 100%;
   overflow: hidden;
-  color: inherit;
+  color: #dce7ff;
   font-size: 7px;
   line-height: 9px;
   font-weight: 800;
