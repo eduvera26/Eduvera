@@ -139,7 +139,10 @@ describe("implemented application routes", () => {
     expect(homework.getByText("1/12")).toBeVisible();
     expect(homework.getByText("1 pending")).toBeVisible();
     expect(homework.getByText("12 assigned this term")).toBeVisible();
-    expect(homework.getByText("-25%")).toBeVisible();
+    const homeworkTrend = homework.getByText("-25%");
+    expect(homeworkTrend.closest(".metric-card__value-row")).toContainElement(homework.getByText("1/12"));
+    expect(homeworkTrend.querySelector("svg.lucide-trending-down")).toBeInTheDocument();
+    expect(homework.getByText("last 30d vs prior 30d")).toBeVisible();
   });
 
   it("formats homework as pending over all assignments in the term", async () => {
@@ -186,7 +189,9 @@ describe("implemented application routes", () => {
     expect(fallingTrend.querySelector("svg.lucide-trending-up")).not.toBeInTheDocument();
     expect(attendance.getByText("Class rank not published")).toBeVisible();
     const homework = within(screen.getByText("Homework", { selector: ".metric-card__header span" }).closest("article")!);
-    expect(homework.getByText("+3 new")).toBeVisible();
+    const homeworkTrend = homework.getByText("+3 new");
+    expect(homeworkTrend.closest(".metric-card__value-row")).toContainElement(homework.getByText("1/12"));
+    expect(homeworkTrend.querySelector("svg.lucide-trending-up")).toBeInTheDocument();
   });
 
   it("switches the parent ID card across all accessible children and marks off-campus red", async () => {

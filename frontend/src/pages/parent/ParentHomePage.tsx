@@ -256,9 +256,10 @@ export function ParentHomePage({
             <MetricCard label="Schedule" icon={<CalendarDays size={19} />} value={`${data.metrics.periodsToday} Periods`}>
               <span>Dismissal:</span><strong className="blue-text">{data.metrics.dismissal}</strong>
             </MetricCard>
-            <MetricCard label="Homework" icon={<ClipboardList size={19} />} value={data.metrics.homeworkTotal === undefined ? `${data.metrics.homeworkTasks} Pending` : `${data.metrics.homeworkTasks}/${data.metrics.homeworkTotal}`} insight={<>
+            <MetricCard label="Homework" icon={<ClipboardList size={19} />} value={data.metrics.homeworkTotal === undefined ? `${data.metrics.homeworkTasks} Pending` : `${data.metrics.homeworkTasks}/${data.metrics.homeworkTotal}`}
+              valueAccessory={<MetricTrend value={homeworkTrend} suffix={homeworkPrevious === 0 && (homeworkRecent ?? 0) > 0 ? " new" : "%"} label="last 30d vs prior 30d" higherIsBetter={false} compact />} insight={<>
               <span className="metric-card__rank">{data.metrics.homeworkTotal === undefined ? "Term history unavailable" : `${data.metrics.homeworkTotal} assigned this term`}</span>
-              <MetricTrend value={homeworkTrend} suffix={homeworkPrevious === 0 && (homeworkRecent ?? 0) > 0 ? " new" : "%"} label="last 30d vs prior 30d" higherIsBetter={false} />
+              <span className="metric-card__rank">{homeworkTrend == null ? "Not enough homework history" : "last 30d vs prior 30d"}</span>
             </>}>
               <span className="blue-dot" /><span>{data.metrics.homeworkTasks} pending</span>
             </MetricCard>
