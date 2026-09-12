@@ -19,12 +19,14 @@ export function StudentIdentityCard({
   identity,
   schoolName = "Cambridge International School",
   switchChild,
+  showSwitchButton = true,
   eyebrow = "Student identity",
   primaryHeading = true,
 }: {
   identity: StudentIdentity;
   schoolName?: string;
   switchChild?: { name: string; onSelect: () => void };
+  showSwitchButton?: boolean;
   eyebrow?: string;
   primaryHeading?: boolean;
 }) {
@@ -83,7 +85,7 @@ export function StudentIdentityCard({
         <i aria-hidden="true" />
       </footer>
     </section>
-    {switchChild ? <button className="parent-id-switch" type="button" onClick={switchChild.onSelect}>Switch to {switchChild.name}</button> : null}
+    {switchChild && showSwitchButton ? <button className="parent-id-switch" type="button" onClick={switchChild.onSelect}>Switch to {switchChild.name}</button> : null}
     {idOpen ? <div className="student-id-view" role="dialog" aria-modal="true" aria-labelledby="digital-student-id-heading">
       <button className="student-id-view__close" type="button" onClick={() => setIdOpen(false)} aria-label="Close digital student ID"><X size={20} /></button>
       <section className="student-id-view__card">

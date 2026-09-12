@@ -70,6 +70,7 @@ export function ParentHomeRoute() {
   const teacher = response.contacts.find((contact) => /teacher|advisor|homeroom/i.test(contact.label));
   return (
     <ParentHomePage
+      key={response.student.id}
       data={data}
       onSelectChild={selectStudent}
       onContactTeacher={contactAction(teacher)}

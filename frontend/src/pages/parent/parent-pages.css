@@ -70,7 +70,6 @@
 .parent-brand,
 .child-switcher,
 .title-row,
-.presence-banner,
 .section-eyebrow-row,
 .button-row,
 .card-heading-row,
@@ -201,33 +200,9 @@
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 1px 3px rgba(29, 78, 216, 0.02);
 }
 
-.child-status-card { padding: 16px; }
-.child-status-card__identity { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 12px; }
-.student-avatar-wrap { position: relative; width: 56px; height: 56px; }
-.student-avatar { width: 56px; height: 56px; border-radius: 999px; object-fit: cover; background: var(--parent-soft-2); }
-.student-avatar--fallback { display: grid; place-items: center; color: var(--parent-primary); font-weight: 800; }
-.student-avatar__presence { position: absolute; right: 0; bottom: 1px; width: 16px; height: 16px; border: 3px solid white; border-radius: 999px; background: var(--parent-positive); }
-.child-status-card__text { min-width: 0; }
 .title-row { gap: 7px; min-width: 0; }
 .title-row--spread { justify-content: space-between; align-items: flex-start; }
-.child-status-card h1, .urgent-leave-card h3 { margin: 0; font-size: 18px; line-height: 24px; letter-spacing: -0.025em; }
-.child-status-card__text p { margin: 1px 0 0; color: var(--parent-muted); font-size: 14px; }
-.quiet-pill { padding: 2px 8px; border-radius: 999px; background: var(--parent-soft-2); font-size: 12px; font-weight: 600; white-space: nowrap; }
-.sibling-button { display: inline-flex; align-items: center; gap: 6px; min-height: 39px; padding: 0 12px; border: 0; border-radius: 10px; background: var(--parent-soft-2); color: var(--parent-primary-bright); cursor: pointer; }
-.sibling-button span { color: #25324a; font-size: 12px; font-weight: 600; }
-.presence-banner { margin-top: 13px; padding: 10px 12px; gap: 9px; border-radius: 10px; background: var(--parent-soft); min-width: 0; }
-.presence-banner strong { color: var(--parent-positive-dark); font-size: 12px; text-transform: uppercase; white-space: nowrap; }
-.presence-banner--away .live-indicator { background: rgba(186, 26, 26, 0.16); }
-.presence-banner--away .live-indicator span { background: var(--parent-danger); }
-.presence-banner--away strong { color: var(--parent-danger); }
-.presence-banner--away { background: #fff2f0; }
-.presence-banner--away > svg { color: var(--parent-danger); }
-.child-status-card:has(.presence-banner--away) .student-avatar__presence { background: var(--parent-danger); }
-.presence-banner > span:not(.live-indicator):not(.dot-divider) { min-width: 0; overflow: hidden; color: var(--parent-ink-soft); text-overflow: ellipsis; white-space: nowrap; }
-.presence-banner > svg { margin-left: auto; flex: 0 0 auto; color: var(--parent-ink-soft); }
-.dot-divider { color: var(--parent-outline); }
-.live-indicator { position: relative; width: 12px; height: 12px; border-radius: 999px; background: rgba(0, 104, 95, 0.16); }
-.live-indicator span { position: absolute; inset: 2px; border-radius: inherit; background: var(--parent-positive); }
+.urgent-leave-card h3 { margin: 0; font-size: 18px; line-height: 24px; letter-spacing: -0.025em; }
 
 .section-eyebrow-row { justify-content: space-between; gap: 12px; padding: 0 5px; }
 .section-eyebrow-row h2 { display: flex; align-items: center; gap: 7px; margin: 0; color: var(--parent-ink); font-size: 12px; line-height: 16px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
@@ -246,6 +221,18 @@
 .parent-app .student-home-id-card h1 { margin: 1px 0 0; }
 .parent-app .student-home-id-card p { margin: 0; }
 .parent-app .student-id-view { z-index: 80; }
+.parent-id-stack { position: relative; isolation: isolate; }
+.parent-id-stack.has-multiple { padding-bottom: 18px; }
+.parent-id-stack.has-multiple::before,
+.parent-id-stack.has-multiple::after { position: absolute; z-index: 0; border-radius: 20px; content: ""; pointer-events: none; box-shadow: 0 9px 18px rgba(29, 78, 216, .16); }
+.parent-id-stack.has-multiple::after { top: 12px; right: 12px; bottom: 7px; left: 12px; background: linear-gradient(135deg, #1748b7, #4477e6); }
+.parent-id-stack.has-three-or-more::before { top: 22px; right: 24px; bottom: 0; left: 24px; background: #12398f; }
+.parent-id-stack > .student-home-id-card { position: relative; z-index: 1; width: 100%; }
+.parent-id-stack.has-multiple > .student-home-id-card { animation: parent-card-deal-in 360ms ease-out both; touch-action: pan-y; }
+.parent-id-stack.is-switching > .student-home-id-card { animation: parent-card-send-back 320ms ease-in both; pointer-events: none; }
+.parent-id-stack.is-switching + .parent-id-switch { pointer-events: none; }
+@keyframes parent-card-deal-in { from { opacity: .35; transform: translate3d(-18px, 17px, 0) scale(.96) rotate(-2deg); } to { opacity: 1; transform: none; } }
+@keyframes parent-card-send-back { 0% { opacity: 1; transform: none; } 55% { opacity: .95; transform: translate3d(32px, -13px, 0) rotate(4deg); } 100% { opacity: 0; transform: translate3d(0, 19px, 0) scale(.94) rotate(0); } }
 .parent-id-switch { align-self: flex-start; width: fit-content; margin: -5px 0 0 auto; padding: 4px 10px; border: 0; border-radius: 999px; color: var(--parent-primary); background: var(--parent-soft-2); font-size: 11px !important; font-weight: 700 !important; cursor: pointer; }
 .action-icon { display: inline-flex; width: 40px; height: 40px; flex: 0 0 auto; align-items: center; justify-content: center; border-radius: 11px; color: #405071; background: var(--parent-soft-2); }
 .action-icon--danger { color: var(--parent-danger); background: var(--parent-danger-soft); }
@@ -725,10 +712,7 @@
 @media (max-width: 390px) {
   .parent-main { padding-inline: 14px; }
   .parent-header { padding-inline: 14px; }
-  .student-avatar-wrap, .student-avatar { width: 50px; height: 50px; }
-  .sibling-button { padding-inline: 9px; }
-  .sibling-button span { max-width: 56px; overflow: hidden; text-overflow: ellipsis; }
-  .child-status-card h1, .urgent-leave-card h3 { font-size: 16px; }
+  .urgent-leave-card h3 { font-size: 16px; }
   .urgent-leave-card { padding: 14px; }
   .urgent-leave-card__body { gap: 10px; }
   .time-label { font-size: 10px; }

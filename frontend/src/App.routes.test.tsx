@@ -57,7 +57,7 @@ interface RouteSmokeCase {
 }
 
 const implementedScreenRoutes: RouteSmokeCase[] = [
-  { path: "/parent/home", heading: "Aarav Sharma" },
+  { path: "/parent/home", heading: "Action Required" },
   { path: "/parent/attendance", heading: "Today's Presence Pulse" },
   { path: "/parent/leave", heading: "Leave Application by Aarav" },
   { path: "/parent/diary", heading: /Wednesday, 16 Sep/ },
@@ -120,8 +120,13 @@ describe("implemented application routes", () => {
     });
     render(<MemoryRouter initialEntries={["/parent/home"]}><App /></MemoryRouter>);
     expect((await screen.findAllByText("Not on campus"))[0]).toBeVisible();
-    expect(document.querySelector(".presence-banner--away")).toBeInTheDocument();
-    await interact.click(await screen.findByRole("button", { name: "Switch to Ananya" }));
+    expect(document.querySelector(".presence-dot--away")).toBeInTheDocument();
+    expect(document.querySelector(".status-pill--danger")).toBeInTheDocument();
+    expect(document.querySelector(".child-status-card")).not.toBeInTheDocument();
+    const switchToAnanya = await screen.findByRole("button", { name: "Switch to Ananya" });
+    expect(document.querySelector(".parent-id-stack.has-three-or-more")).toBeInTheDocument();
+    await interact.click(switchToAnanya);
+    expect(document.querySelector(".parent-id-stack.is-switching")).toBeInTheDocument();
     expect(await screen.findByRole("button", { name: /Open digital student ID for Ananya Sharma/ })).toBeVisible();
     await interact.click(screen.getByRole("button", { name: "Switch to Rohan" }));
     await interact.click(await screen.findByRole("button", { name: /Open digital student ID for Rohan Sharma/ }));

@@ -2,7 +2,6 @@ import { useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import {
-  ArrowLeftRight,
   BookOpen,
   Bus,
   CalendarDays,
@@ -13,7 +12,6 @@ import {
   PenLine,
   Phone,
   PieChart,
-  ShieldCheck,
   Sigma,
 } from "lucide-react";
 import { fallbackHomeData } from "./parentDemoData";
@@ -21,7 +19,7 @@ import { useOptionalAuth } from "../../features/auth/AuthContext";
 import { getAccessibleStudents } from "../../features/school/api";
 import { StudentIdentityCard } from "../student/StudentIdentityCard";
 import { ParentShell } from "./ParentShell";
-import type { ParentChildSummary, ParentHomeData, ParentPageAction } from "./parentTypes";
+import type { ParentHomeData, ParentPageAction } from "./parentTypes";
 import "./parent-pages.css";
 
 export interface ParentHomePageProps {
@@ -54,22 +52,6 @@ function MetricCard({
   );
 }
 
-function StudentAvatar({ child }: { child: ParentChildSummary }) {
-  const [imageFailed, setImageFailed] = useState(false);
-  const initials = child.name.split(/\s+/).map((part) => part[0]).slice(0, 2).join("").toUpperCase();
-
-  return (
-    <div className="student-avatar-wrap">
-      {child.avatarUrl && !imageFailed ? (
-        <img className="student-avatar" src={child.avatarUrl} alt="" onError={() => setImageFailed(true)} />
-      ) : (
-        <span className="student-avatar student-avatar--fallback" aria-hidden="true">{initials}</span>
-      )}
-      <span className="student-avatar__presence" />
-    </div>
-  );
-}
-
 export function ParentHomePage({
   data = fallbackHomeData,
   onSelectChild,
@@ -78,6 +60,7 @@ export function ParentHomePage({
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const auth = useOptionalAuth();
+  const [isSwitching, setIsSwitching] = useState(false);
   const schoolName = auth?.memberships.find((membership) => membership.role === "guardian")?.school_name ?? "Cambridge International School";
   const childrenQuery = useQuery({ queryKey: ["school", "accessible-students"], queryFn: getAccessibleStudents, staleTime: 60_000 });
   const children = childrenQuery.data?.results.map((student) => ({ id: student.id, name: student.user.display_name })) ?? [];
@@ -85,6 +68,12 @@ export function ParentHomePage({
   const nextChild = children.length > 1
     ? children[(currentChildIndex + 1) % children.length]
     : data.sibling;
+  const childCount = Math.max(children.length, data.sibling ? 2 : 1);
+  const switchToChild = (childId: string) => {
+    if (!onSelectChild || isSwitching || childId === data.child.id) return;
+    setIsSwitching(true);
+    window.setTimeout(() => { void onSelectChild(childId); }, 320);
+  };
   const selectedStudentId = searchParams.get("student_id");
   const parentPath = (path: string) =>
     selectedStudentId ? `${path}${path.includes("?") ? "&" : "?"}student_id=${encodeURIComponent(selectedStudentId)}` : path;
@@ -106,37 +95,14 @@ export function ParentHomePage({
       pageLabel="Home"
       child={data.child}
       presenceStatus={data.presence.status === "In School" ? "in" : "away"}
-      onSelectChild={onSelectChild}
+      onSelectChild={switchToChild}
       childOptions={data.sibling ? [data.child, data.sibling] : [data.child]}
     >
       <div className="parent-stack home-page">
-        <section className="surface-card child-status-card" aria-labelledby="child-name">
-          <div className="child-status-card__identity">
-            <StudentAvatar key={`${data.child.id}-${data.child.avatarUrl ?? "fallback"}`} child={data.child} />
-            <div className="child-status-card__text">
-              <div className="title-row">
-                <h1 id="child-name">{data.child.name}</h1>
-                <span className="quiet-pill">Roll #{data.child.rollNumber}</span>
-              </div>
-              <p>{data.child.grade} • Section {data.child.section} • {data.child.board}</p>
-            </div>
-            {nextChild && onSelectChild ? (
-              <button className="sibling-button" type="button" onClick={() => void onSelectChild(nextChild.id)}>
-                <ArrowLeftRight size={17} />
-                <span>{nextChild.name.split(" ")[0] ?? nextChild.name}</span>
-              </button>
-            ) : null}
-          </div>
-          <div className={data.presence.status === "In School" ? "presence-banner" : "presence-banner presence-banner--away"}>
-            <span className="live-indicator"><span /></span>
-            <strong>{data.presence.status}</strong>
-            <span className="dot-divider">•</span>
-            <span>{data.presence.detail}</span>
-            <ShieldCheck size={17} />
-          </div>
-        </section>
-
-        <StudentIdentityCard key={data.child.id} identity={data.idCard} schoolName={schoolName} primaryHeading={false} switchChild={nextChild && onSelectChild ? { name: nextChild.name.split(" ")[0] ?? nextChild.name, onSelect: () => void onSelectChild(nextChild.id) } : undefined} />
+        <div className={`parent-id-stack${childCount > 1 ? " has-multiple" : ""}${childCount > 2 ? " has-three-or-more" : ""}${isSwitching ? " is-switching" : ""}`}>
+          <StudentIdentityCard key={data.child.id} identity={data.idCard} schoolName={schoolName} primaryHeading={false} showSwitchButton={false} switchChild={nextChild && onSelectChild ? { name: nextChild.name.split(" ")[0] ?? nextChild.name, onSelect: () => switchToChild(nextChild.id) } : undefined} />
+        </div>
+        {nextChild && onSelectChild ? <button className="parent-id-switch" type="button" disabled={isSwitching} onClick={() => switchToChild(nextChild.id)}>Switch to {nextChild.name.split(" ")[0] ?? nextChild.name}</button> : null}
 
         <section className="home-action-section" aria-labelledby="action-required-heading">
           <div className="section-eyebrow-row">
