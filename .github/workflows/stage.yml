@@ -11,26 +11,15 @@ concurrency:
 
 jobs:
   # Runs on GitHub: everything must typecheck, lint, build and pass tests
-  # against a throwaway Postgres before anything reaches the stage host.
+  # against the shared Supabase database (repo secret DATABASE_URL) before
+  # anything reaches the stage host. Migrations are idempotent, the seed is
+  # an upsert, and the suite cleans up the rows it creates.
   verify:
     name: Verify
     runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:17
-        env:
-          POSTGRES_USER: omnischool
-          POSTGRES_PASSWORD: omnischool
-          POSTGRES_DB: omnischool
-        ports: ["5432:5432"]
-        options: >-
-          --health-cmd "pg_isready -U omnischool"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
     env:
-      DATABASE_URL: postgresql://omnischool:omnischool@127.0.0.1:5432/omnischool
-      COOKIE_SECRET: ci-only-cookie-secret-that-is-long-enough-0123456789
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      COOKIE_SECRET: ${{ secrets.COOKIE_SECRET }}
       DEMO_MODE: "true"
     steps:
       - uses: actions/checkout@v4
@@ -51,7 +40,7 @@ jobs:
           npm run lint
           npm run build
 
-      - name: Backend · migrate and seed the test database
+      - name: Backend · migrate and seed the shared database
         working-directory: backend
         run: |
           npm run db:migrate
