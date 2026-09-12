@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Bell, CalendarDays, ClipboardCheck, FileText, LayoutGrid, LogOut, Moon, Sun } from "lucide-react";
+import { Bell, BookOpen, CalendarDays, ClipboardCheck, FileText, LayoutGrid, LogOut, Moon, Sun } from "lucide-react";
 import { useEffect, useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { normaliseNotifications, staffApi } from "../features/staff";
@@ -10,12 +10,15 @@ interface NavItem { to: string; label: string; icon: typeof LayoutGrid; personas
 
 /* Navigation is derived from persona, not a fixed menu. */
 const NAV: NavItem[] = [
-  { to: "/", label: "Overview", icon: LayoutGrid, personas: ["principal", "teacher"] },
-  { to: "/attendance", label: "Attendance", icon: ClipboardCheck, personas: ["principal", "teacher"] },
-  { to: "/leave", label: "Leave requests", icon: FileText, personas: ["principal", "teacher"] },
-  { to: "/timetable", label: "Timetable", icon: CalendarDays, personas: ["principal"] },
-  { to: "/notifications", label: "Notifications", icon: Bell, personas: ["principal", "teacher"] },
+  { to: "/", label: "Overview", icon: LayoutGrid, personas: ["principal", "teacher", "parent", "student"] },
+  { to: "/attendance", label: "Attendance", icon: ClipboardCheck, personas: ["principal", "teacher", "parent", "student"] },
+  { to: "/leave", label: "Leave requests", icon: FileText, personas: ["principal", "teacher", "parent", "student"] },
+  { to: "/timetable", label: "Timetable", icon: CalendarDays, personas: ["principal", "parent", "student"] },
+  { to: "/diary", label: "Diary", icon: BookOpen, personas: ["parent", "student"] },
+  { to: "/notifications", label: "Notifications", icon: Bell, personas: ["principal", "teacher", "parent", "student"] },
 ];
+const PERSONA_LABEL: Record<Persona, string> = { principal: "Principal", teacher: "Teacher", parent: "Guardian", student: "Student" };
+const AREA_LABEL: Record<Persona, string> = { principal: "Leadership", teacher: "Teaching", parent: "Family", student: "Learner" };
 
 function useTheme() {
   const [theme, setTheme] = useState<string>(() => document.documentElement.getAttribute("data-theme") ?? "");
@@ -47,7 +50,7 @@ export function Shell() {
           <div style={{ fontSize: 17, letterSpacing: ".14em", fontWeight: 700 }}>OMNISCHOOL</div>
           <div style={{ border: "1px solid var(--line)", borderRadius: 6, padding: "8px 10px" }}>
             <div style={{ fontSize: 12.5, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{school?.school_name ?? "—"}</div>
-            <div style={{ fontSize: 11, color: "var(--faint)" }}>{persona === "principal" ? "Leadership" : "Teaching"} · staff console</div>
+            <div style={{ fontSize: 11, color: "var(--faint)" }}>{persona ? AREA_LABEL[persona] : ""} · desktop</div>
           </div>
         </div>
 
@@ -75,7 +78,7 @@ export function Shell() {
           <Initials name={user?.display_name ?? "?"} src={user?.avatar_url} />
           <div style={{ minWidth: 0 }}>
             <div style={{ fontSize: 12.5, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{user?.display_name}</div>
-            <div style={{ fontSize: 11, color: "var(--faint)" }}>{persona === "principal" ? "Principal" : "Teacher"}</div>
+            <div style={{ fontSize: 11, color: "var(--faint)" }}>{persona ? PERSONA_LABEL[persona] : ""}</div>
           </div>
           <button className="btn sm" style={{ marginLeft: "auto", padding: 6 }} onClick={() => void logout()} aria-label="Sign out" title="Sign out"><LogOut size={14} /></button>
         </div>
@@ -83,7 +86,7 @@ export function Shell() {
 
       <div className="main">
         <div className="topbar">
-          <div style={{ fontSize: 13, color: "var(--muted)", fontWeight: 500 }}>{current?.label ?? "Staff console"}</div>
+          <div style={{ fontSize: 13, color: "var(--muted)", fontWeight: 500 }}>{current?.label ?? "OmniSchool"}</div>
           {demoMode ? <span className="st neu" style={{ fontSize: 11 }}>Demo data</span> : null}
           <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 10 }}>
             <span className="faint" style={{ fontSize: 12 }}>{Intl.DateTimeFormat().resolvedOptions().timeZone}</span>

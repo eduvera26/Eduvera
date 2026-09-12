@@ -27,13 +27,13 @@ export function LoginPage() {
       <form onSubmit={submit} className="card" style={{ width: "min(400px, 100%)", padding: 28, display: "flex", flexDirection: "column", gap: 18 }}>
         <div>
           <div style={{ fontSize: 15, letterSpacing: ".14em", fontWeight: 700 }}>OMNISCHOOL</div>
-          <h1 className="dsp" style={{ marginTop: 10 }}>Staff sign in</h1>
-          <p className="muted" style={{ fontSize: 13.5, marginTop: 6 }}>The desktop console for principals and teachers. Families use the mobile app.</p>
+          <h1 className="dsp" style={{ marginTop: 10 }}>Sign in</h1>
+          <p className="muted" style={{ fontSize: 13.5, marginTop: 6 }}>Principals, teachers, guardians and students all sign in here. What you see is decided by your school membership.</p>
         </div>
 
         {notStaff ? (
           <div style={{ background: "var(--cau-bg)", color: "var(--cau-ink)", borderRadius: 7, padding: "11px 13px", fontSize: 13, lineHeight: 1.5 }}>
-            This account has no staff membership. Parents and students should use the <a href={import.meta.env.DEV ? "http://127.0.0.1:5173/" : "/"}>mobile app</a>.
+            This account has no active school membership yet. Ask your school to complete onboarding, or try the <a href={import.meta.env.DEV ? "http://127.0.0.1:5173/" : "/"}>mobile app</a>.
           </div>
         ) : null}
 
@@ -53,7 +53,7 @@ export function LoginPage() {
         {demoMode ? (
           <div style={{ fontSize: 12.5, color: "var(--faint)", lineHeight: 1.6 }}>
             Demo accounts · password <span className="mono">OmniDemo@2026</span><br />
-            <span className="mono">meera.principal</span> (principal) · <span className="mono">kavita.staff</span> (teacher)
+            <span className="mono">meera.principal</span> · <span className="mono">kavita.staff</span> · <span className="mono">pooja.parent</span> · <span className="mono">aarav.student</span>
           </div>
         ) : null}
       </form>

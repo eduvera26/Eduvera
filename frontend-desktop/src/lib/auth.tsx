@@ -16,9 +16,9 @@ export interface SessionUser {
 }
 export interface Membership { id: string; school_id: string; school_name: string; role: MembershipRole }
 
-/* The desktop dashboard is a staff product. Persona is derived from the
-   school membership, never from a fixed menu. */
-export type Persona = "principal" | "teacher";
+/* Every account type can sign in here. Persona is derived from the school
+   membership, never from a fixed menu. */
+export type Persona = "principal" | "teacher" | "parent" | "student";
 
 interface AuthState {
   status: "loading" | "anonymous" | "signed-in";
@@ -27,6 +27,8 @@ interface AuthState {
   persona: Persona | null;
   school: Membership | null;
   demoMode: boolean;
+  child: string | null;                 // guardian's selected child (student id)
+  setChild(id: string | null): void;
   login(identifier: string, password: string): Promise<void>;
   logout(): Promise<void>;
 }
@@ -38,6 +40,10 @@ function personaFor(memberships: Membership[]): { persona: Persona | null; schoo
   if (admin) return { persona: "principal", school: admin };
   const staff = memberships.find((m) => m.role === "staff");
   if (staff) return { persona: "teacher", school: staff };
+  const guardian = memberships.find((m) => m.role === "guardian");
+  if (guardian) return { persona: "parent", school: guardian };
+  const student = memberships.find((m) => m.role === "student");
+  if (student) return { persona: "student", school: student };
   return { persona: null, school: null };
 }
 
@@ -49,6 +55,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<SessionUser | null>(null);
   const [memberships, setMemberships] = useState<Membership[]>([]);
   const [demoMode, setDemoMode] = useState(false);
+  const [child, setChild] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -77,14 +84,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = useCallback(async () => {
     try { await api("/api/v1/auth/logout/", { method: "POST" }); } finally {
-      setUser(null); setMemberships([]); setStatus("anonymous");
+      setUser(null); setMemberships([]); setChild(null); setStatus("anonymous");
     }
   }, []);
 
   const value = useMemo<AuthState>(() => {
     const { persona, school } = personaFor(memberships);
-    return { status, user, memberships, persona, school, demoMode, login, logout };
-  }, [status, user, memberships, demoMode, login, logout]);
+    return { status, user, memberships, persona, school, demoMode, child, setChild, login, logout };
+  }, [status, user, memberships, demoMode, child, login, logout]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

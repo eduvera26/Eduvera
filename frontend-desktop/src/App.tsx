@@ -4,6 +4,9 @@ import { Shell } from "./components/Shell";
 import { ToastProvider } from "./components/ui";
 import { AuthProvider, useAuth } from "./lib/auth";
 import { AttendanceIndex, RegisterPage } from "./pages/AttendancePage";
+import { ParentAttendancePage, StudentAttendancePage } from "./pages/FamilyAttendance";
+import { ParentHome, StudentHome } from "./pages/FamilyHome";
+import { FamilyDiaryPage, FamilyTimetablePage, ParentLeavePage, StudentLeavePage } from "./pages/FamilyPages";
 import { LeavePage } from "./pages/LeavePage";
 import { LoginPage } from "./pages/LoginPage";
 import { NotificationsPage } from "./pages/NotificationsPage";
@@ -22,14 +25,34 @@ function RequireStaff() {
   return <Outlet />;
 }
 
-function RequirePrincipal() {
+function Only({ personas }: { personas: string[] }) {
   const { persona } = useAuth();
-  return persona === "principal" ? <Outlet /> : <Navigate to="/" replace />;
+  return persona && personas.includes(persona) ? <Outlet /> : <Navigate to="/" replace />;
 }
 
+/* One route, four screens: each persona opens on its own question. */
 function Home() {
   const { persona } = useAuth();
-  return persona === "principal" ? <PrincipalHome /> : <TeacherHome />;
+  if (persona === "principal") return <PrincipalHome />;
+  if (persona === "teacher") return <TeacherHome />;
+  if (persona === "parent") return <ParentHome />;
+  return <StudentHome />;
+}
+function Attendance() {
+  const { persona } = useAuth();
+  if (persona === "parent") return <ParentAttendancePage />;
+  if (persona === "student") return <StudentAttendancePage />;
+  return <AttendanceIndex />;
+}
+function Leave() {
+  const { persona } = useAuth();
+  if (persona === "parent") return <ParentLeavePage />;
+  if (persona === "student") return <StudentLeavePage />;
+  return <LeavePage />;
+}
+function Timetable() {
+  const { persona } = useAuth();
+  return persona === "principal" ? <TimetablePage /> : <FamilyTimetablePage />;
 }
 
 export default function App() {
@@ -43,12 +66,17 @@ export default function App() {
               <Route element={<RequireStaff />}>
                 <Route element={<Shell />}>
                   <Route index element={<Home />} />
-                  <Route path="attendance" element={<AttendanceIndex />} />
-                  <Route path="attendance/:classId" element={<RegisterPage />} />
-                  <Route path="leave" element={<LeavePage />} />
+                  <Route path="attendance" element={<Attendance />} />
+                  <Route element={<Only personas={["principal", "teacher"]} />}>
+                    <Route path="attendance/:classId" element={<RegisterPage />} />
+                  </Route>
+                  <Route path="leave" element={<Leave />} />
                   <Route path="notifications" element={<NotificationsPage />} />
-                  <Route element={<RequirePrincipal />}>
-                    <Route path="timetable" element={<TimetablePage />} />
+                  <Route element={<Only personas={["principal", "parent", "student"]} />}>
+                    <Route path="timetable" element={<Timetable />} />
+                  </Route>
+                  <Route element={<Only personas={["parent", "student"]} />}>
+                    <Route path="diary" element={<FamilyDiaryPage />} />
                   </Route>
                   <Route path="*" element={<Navigate to="/" replace />} />
                 </Route>
