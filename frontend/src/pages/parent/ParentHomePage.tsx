@@ -78,7 +78,7 @@ export function ParentHomePage({
   const activeTransition = transition?.phase === "completed" && transition.targetId === data.child.id ? null : transition;
   const schoolName = auth?.memberships.find((membership) => membership.role === "guardian")?.school_name ?? "Cambridge International School";
   const childrenQuery = useQuery({ queryKey: ["school", "accessible-students"], queryFn: getAccessibleStudents, staleTime: 60_000 });
-  const children = childrenQuery.data?.results.map((student) => ({ id: student.id, name: student.user.display_name })) ?? [];
+  const children = childrenQuery.data?.results.map((student) => ({ id: student.id, name: student.user.display_name, grade: `Grade ${student.current_enrollment.grade}`, section: student.current_enrollment.section, avatarUrl: student.avatar_url })) ?? [];
   const visibleChildId = activeTransition?.phase === "completed" ? activeTransition.targetId : data.child.id;
   const currentChildIndex = children.findIndex((student) => student.id === visibleChildId);
   const nextChild = children.length > 1
@@ -137,7 +137,9 @@ export function ParentHomePage({
       child={data.child}
       presenceStatus={data.presence.status === "In School" ? "in" : "away"}
       onSelectChild={(childId) => { void switchToChild(childId); }}
-      childOptions={data.sibling ? [data.child, data.sibling] : [data.child]}
+      childOptions={children.length ? children : data.sibling ? [data.child, data.sibling] : [data.child]}
+      selectedChildId={visibleChildId}
+      childSwitchDisabled={Boolean(activeTransition)}
     >
       <div className="parent-stack home-page">
         <div className={`parent-id-stack${childCount > 1 ? " has-multiple" : ""}${childCount > 2 ? " has-three-or-more" : ""}${activeTransition ? ` is-${activeTransition.phase} direction-${activeTransition.direction}` : ""}`} aria-busy={activeTransition?.phase === "preparing"}>
@@ -148,7 +150,6 @@ export function ParentHomePage({
             <StudentIdentityCard identity={activeTransition?.phase === "completed" ? activeTransition.incoming?.idCard ?? data.idCard : data.idCard} schoolName={schoolName} primaryHeading={false} showSwitchButton={false} switchChild={nextChild && onSelectChild ? { name: nextChild.name.split(" ")[0] ?? nextChild.name, onSelect: () => { void switchToChild(nextChild.id, "left"); }, onSwipe: swipeCard } : undefined} />
           </div>
         </div>
-        {nextChild && onSelectChild ? <button className="parent-id-switch" type="button" disabled={Boolean(activeTransition)} onClick={() => { void switchToChild(nextChild.id, "left"); }}>{activeTransition?.phase === "preparing" ? "Getting next card…" : `Switch to ${nextChild.name.split(" ")[0] ?? nextChild.name}`}</button> : null}
         {switchError ? <p className="parent-id-stack__error" role="alert">{switchError}</p> : null}
 
         <section className="home-action-section" aria-labelledby="action-required-heading">

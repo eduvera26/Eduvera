@@ -120,31 +120,60 @@ describe("implemented application routes", () => {
     });
     render(<MemoryRouter initialEntries={["/parent/home"]}><App /></MemoryRouter>);
     expect((await screen.findAllByText("Not on campus"))[0]).toBeVisible();
-    expect(document.querySelector(".presence-dot--away")).toBeInTheDocument();
+    expect(document.querySelector(".child-switcher")).not.toBeInTheDocument();
     expect(document.querySelector(".status-pill--danger")).toBeInTheDocument();
     expect(document.querySelector(".child-status-card")).not.toBeInTheDocument();
-    const switchToAnanya = await screen.findByRole("button", { name: "Switch to Ananya" });
+    const chooseChild = await screen.findByRole("button", { name: "Choose child profile" });
     await waitFor(() => expect(document.querySelector(".parent-id-stack.has-three-or-more")).toBeInTheDocument());
-    await interact.click(switchToAnanya);
+    expect(screen.queryByRole("button", { name: /Aarav Sharma • Class/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Switch to Ananya/ })).not.toBeInTheDocument();
+    await interact.click(chooseChild);
+    expect(screen.getByRole("dialog", { name: "Select child profile" })).toBeVisible();
+    await interact.click(screen.getByRole("button", { name: "View Ananya Sharma's parent dashboard" }));
     await waitFor(() => expect(document.querySelector(".parent-id-stack.is-animating.direction-left")).toBeInTheDocument());
     expect(document.querySelector(".parent-id-stack__incoming")).toHaveTextContent("Ananya Sharma");
     expect(await screen.findByRole("button", { name: /Open digital student ID for Ananya Sharma/ })).toBeVisible();
-    await waitFor(() => expect(screen.getByRole("button", { name: "Switch to Rohan" })).toBeEnabled());
-    await interact.click(screen.getByRole("button", { name: "Switch to Rohan" }));
+    await waitFor(() => expect(chooseChild).toBeEnabled());
+    await interact.click(chooseChild);
+    await interact.click(screen.getByRole("button", { name: "View Rohan Sharma's parent dashboard" }));
     expect(await screen.findByRole("button", { name: /Open digital student ID for Rohan Sharma/ })).toBeVisible();
-    await waitFor(() => expect(screen.getByRole("button", { name: "Switch to Aarav" })).toBeEnabled());
+    await waitFor(() => expect(chooseChild).toBeEnabled());
     const rohanCard = screen.getByRole("button", { name: /Open digital student ID for Rohan Sharma/ });
     fireEvent.touchStart(rohanCard, { touches: [{ clientX: 80 }] });
     fireEvent.touchEnd(rohanCard, { changedTouches: [{ clientX: 220 }] });
     await waitFor(() => expect(document.querySelector(".parent-id-stack.is-animating.direction-right")).toBeInTheDocument());
     expect(await screen.findByRole("button", { name: /Open digital student ID for Ananya Sharma/ })).toBeVisible();
-    await waitFor(() => expect(screen.getByRole("button", { name: "Switch to Rohan" })).toBeEnabled());
+    await waitFor(() => expect(chooseChild).toBeEnabled());
     const ananyaCard = screen.getByRole("button", { name: /Open digital student ID for Ananya Sharma/ });
     fireEvent.touchStart(ananyaCard, { touches: [{ clientX: 220 }] });
     fireEvent.touchEnd(ananyaCard, { changedTouches: [{ clientX: 80 }] });
     await waitFor(() => expect(document.querySelector(".parent-id-stack.is-animating.direction-left")).toBeInTheDocument());
     await interact.click(await screen.findByRole("button", { name: /Open digital student ID for Rohan Sharma/ }));
     expect(screen.getByRole("dialog", { name: "Rohan Sharma" })).toHaveTextContent("CIS-003");
+  }, 12000);
+
+  it("switches directly between two child profiles without opening a menu", async () => {
+    const interact = userEvent.setup();
+    const original = apiFetchMock.getMockImplementation() as (path: string) => Promise<unknown>;
+    const first = (schoolApiFixture("/api/v1/students/") as { results: Array<{ id: string; user: { display_name: string }; admission_number: string }> }).results[0]!;
+    const second = { ...first, id: "student-2", admission_number: "CIS-002", user: { ...first.user, display_name: "Ananya Sharma" } };
+    apiFetchMock.mockImplementation((path: string) => {
+      if (path === "/api/v1/students/") return Promise.resolve({ results: [first, second] });
+      if (path.startsWith("/api/v1/screens/parent/home/")) {
+        const selected = path.includes("student-2") ? second : first;
+        return Promise.resolve({ ...(schoolApiFixture(path) as object), student: selected, siblings: [selected === first ? second : first] });
+      }
+      return original(path);
+    });
+    render(<MemoryRouter initialEntries={["/parent/home"]}><App /></MemoryRouter>);
+    const toggle = await screen.findByRole("button", { name: "Switch to other child" });
+    await waitFor(() => expect(toggle).toBeEnabled());
+    await interact.click(toggle);
+    expect(screen.queryByRole("dialog", { name: "Select child profile" })).not.toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: /Open digital student ID for Ananya Sharma/ })).toBeVisible();
+    await waitFor(() => expect(toggle).toBeEnabled());
+    await interact.click(toggle);
+    expect(await screen.findByRole("button", { name: /Open digital student ID for Aarav Sharma/ })).toBeVisible();
   }, 12000);
 
   it("cycles a four-child card deck in both directions, including wraparound", async () => {
@@ -178,12 +207,16 @@ describe("implemented application routes", () => {
       fireEvent.touchEnd(card, { changedTouches: [{ clientX: endX, clientY: 100 }] });
       await waitFor(() => expect(document.querySelector(`.parent-id-stack.is-animating.direction-${direction}`)).toBeInTheDocument());
       expect(document.querySelector(".parent-id-stack__incoming")).toHaveTextContent(`${to} Sharma`);
-      await screen.findByRole("button", { name: new RegExp(`^Open digital student ID for ${to} Sharma`) });
+      await screen.findByRole("button", { name: new RegExp(`^Open digital student ID for ${to} Sharma`) }, { timeout: 3000 });
       await waitFor(() => expect(document.querySelector(".parent-id-stack.is-animating")).not.toBeInTheDocument());
     };
 
     expect(await screen.findByRole("button", { name: /^Open digital student ID for Aarav Sharma/ })).toBeVisible();
     await waitFor(() => expect(document.querySelector(".parent-id-stack.has-three-or-more")).toBeInTheDocument());
+    const chooser = screen.getByRole("button", { name: "Choose child profile" });
+    await userEvent.setup().click(chooser);
+    expect(screen.getByRole("dialog", { name: "Select child profile" }).querySelectorAll("button")).toHaveLength(4);
+    await userEvent.setup().click(chooser);
     await swipe("Aarav", "Kavya", "right");
     await swipe("Kavya", "Rohan", "right");
     await swipe("Rohan", "Ananya", "right");
@@ -192,7 +225,7 @@ describe("implemented application routes", () => {
     await swipe("Ananya", "Rohan", "left");
     await swipe("Rohan", "Kavya", "left");
     await swipe("Kavya", "Aarav", "left");
-  }, 40000);
+  }, 50000);
 
   it("renders the timetable as a weekly period chart without the old tab switcher", async () => {
     render(<MemoryRouter initialEntries={["/student/timetable"]}><App /></MemoryRouter>);

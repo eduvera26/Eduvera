@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { NavLink, useSearchParams } from "react-router-dom";
 import {
   BookOpen,
@@ -18,6 +18,10 @@ import type { ParentChildSummary, ParentPageAction } from "./parentTypes";
 import "./parent-pages.css";
 
 export type ParentRoute = "home" | "attendance" | "leave" | "diary" | "timetable";
+
+function ChildPortrait({ name, avatarUrl }: { name: string; avatarUrl?: string }) {
+  return avatarUrl ? <img src={avatarUrl} alt="" /> : <span aria-hidden="true">{name.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase()}</span>;
+}
 
 const parentRoutes: Array<{
   id: ParentRoute;
@@ -38,8 +42,10 @@ export interface ParentShellProps {
   child?: ParentChildSummary;
   children: ReactNode;
   onSelectChild?: (childId: string) => ParentPageAction;
-  childOptions?: Array<{ id: string; name: string; grade: string; section: string }>;
+  childOptions?: Array<{ id: string; name: string; grade: string; section: string; avatarUrl?: string }>;
   presenceStatus?: "in" | "away";
+  selectedChildId?: string;
+  childSwitchDisabled?: boolean;
 }
 
 export function ParentShell({
@@ -50,6 +56,8 @@ export function ParentShell({
   onSelectChild,
   childOptions,
   presenceStatus,
+  selectedChildId,
+  childSwitchDisabled = false,
 }: ParentShellProps) {
   const auth = useOptionalAuth();
   const schoolName = auth?.memberships.find((membership) => membership.role === "guardian")?.school_name ?? "Cambridge International School";
@@ -57,6 +65,22 @@ export function ParentShell({
   const [searchParams] = useSearchParams();
   const selectedStudentId = searchParams.get("student_id");
   const [selectorOpen, setSelectorOpen] = useState(false);
+  const childProfilesRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!selectorOpen || active !== "home") return;
+    const closeOutside = (event: PointerEvent) => {
+      if (!childProfilesRef.current?.contains(event.target as Node)) setSelectorOpen(false);
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setSelectorOpen(false);
+    };
+    document.addEventListener("pointerdown", closeOutside);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeOutside);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [selectorOpen, active]);
   const studentsQuery = useQuery({
     queryKey: ["school", "accessible-students"],
     queryFn: getAccessibleStudents,
@@ -67,10 +91,16 @@ export function ParentShell({
     name: student.user.display_name,
     grade: `Grade ${student.current_enrollment.grade}`,
     section: student.current_enrollment.section,
+    avatarUrl: student.avatar_url,
   }));
   const selectableChildren = accessibleChildren?.length
     ? accessibleChildren
     : childOptions?.length ? childOptions : [child];
+  const currentChildId = selectedChildId ?? child.id;
+  const currentChildIndex = selectableChildren.findIndex((option) => option.id === currentChildId);
+  const orderedChildren = currentChildIndex < 0 ? selectableChildren : [
+    ...selectableChildren.slice(currentChildIndex), ...selectableChildren.slice(0, currentChildIndex),
+  ];
 
   const chooseChild = async (childId: string) => {
     await onSelectChild?.(childId);
@@ -87,10 +117,42 @@ export function ParentShell({
           </div>
           <div className="parent-header__actions">
             <NotificationCenter buttonClassName="icon-button" iconSize={20} />
+            {active === "home" && selectableChildren.length > 1 ? (
+              <div className="parent-child-profiles" ref={childProfilesRef}>
+                <button className="parent-child-profiles__trigger" type="button"
+                  aria-label={selectableChildren.length === 2 ? "Switch to other child" : "Choose child profile"}
+                  aria-expanded={selectableChildren.length > 2 ? selectorOpen : undefined}
+                  aria-haspopup={selectableChildren.length > 2 ? "dialog" : undefined}
+                  disabled={childSwitchDisabled || studentsQuery.isPending}
+                  onClick={() => {
+                    if (selectableChildren.length === 2) void chooseChild(selectableChildren.find((option) => option.id !== currentChildId)?.id ?? currentChildId);
+                    else setSelectorOpen((open) => !open);
+                  }}>
+                  {orderedChildren.slice(0, 3).map((option, index) => (
+                    <span className="parent-child-profiles__layer" key={option.id} style={{ "--profile-layer": index } as CSSProperties}>
+                      <ChildPortrait name={option.name} avatarUrl={option.avatarUrl} />
+                    </span>
+                  ))}
+                </button>
+                {selectorOpen && selectableChildren.length > 2 ? (
+                  <div className="parent-child-profiles__menu" role="dialog" aria-label="Select child profile">
+                    {selectableChildren.map((option) => (
+                      <button className="parent-child-profiles__option" key={option.id} type="button"
+                        aria-label={`View ${option.name}'s parent dashboard`} aria-pressed={option.id === currentChildId}
+                        disabled={childSwitchDisabled || option.id === currentChildId} onClick={() => void chooseChild(option.id)}>
+                        <span className="parent-child-profiles__portrait"><ChildPortrait name={option.name} avatarUrl={option.avatarUrl} /></span>
+                        <span className="parent-child-profiles__name">{option.name.split(" ")[0]}</span>
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
             <AccountMenu buttonClassName="profile-button" ariaLabel="Open parent profile" iconSize={20} />
           </div>
         </div>
         <div className="parent-header__context">
+          {active !== "home" ? (
           <div className="child-switcher-wrap">
             <button
               className="child-switcher"
@@ -114,6 +176,7 @@ export function ParentShell({
               </div>
             ) : null}
           </div>
+          ) : null}
           <span className="parent-header__page">{pageLabel}</span>
         </div>
       </header>

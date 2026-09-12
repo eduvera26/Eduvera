@@ -123,6 +123,20 @@
 
 .parent-header__actions { gap: 9px; }
 
+.parent-child-profiles { position: relative; flex: 0 0 auto; }
+.parent-child-profiles__trigger { position: relative; display: block; width: 49px; height: 43px; padding: 0; border: 0; background: transparent; cursor: pointer; }
+.parent-child-profiles__trigger:disabled { cursor: wait; }
+.parent-child-profiles__layer { position: absolute; left: calc(2px + var(--profile-layer) * 7px); top: calc(5px + var(--profile-layer) * 2px); z-index: calc(3 - var(--profile-layer)); display: grid; width: 33px; height: 33px; overflow: hidden; place-items: center; border: 2px solid white; border-radius: 50%; background: #dce9ff; box-shadow: 0 2px 6px rgba(11, 28, 48, .15); color: var(--parent-primary); font-size: 10px; font-weight: 800; transition: transform 180ms ease; }
+.parent-child-profiles__trigger:hover:not(:disabled) .parent-child-profiles__layer:first-child { transform: translateY(-3px); }
+.parent-child-profiles__layer img, .parent-child-profiles__portrait img { width: 100%; height: 100%; object-fit: cover; }
+.parent-child-profiles__menu { position: absolute; top: calc(100% + 9px); right: -45px; z-index: 80; display: flex; flex-wrap: wrap; gap: 6px; width: max-content; max-width: min(318px, calc(100vw - 24px)); padding: 11px; border: 1px solid #dce4f4; border-radius: 16px; background: white; box-shadow: 0 14px 36px rgba(15, 23, 42, .16); }
+.parent-child-profiles__option { display: flex; width: 62px; flex: 0 0 62px; flex-direction: column; align-items: center; gap: 4px; padding: 6px 2px; border: 0; border-radius: 11px; color: var(--parent-ink); background: transparent; cursor: pointer; }
+.parent-child-profiles__option:hover:not(:disabled) { background: var(--parent-soft); }
+.parent-child-profiles__option:disabled { cursor: default; }
+.parent-child-profiles__portrait { display: grid; width: 39px; height: 39px; overflow: hidden; place-items: center; border: 2px solid transparent; border-radius: 50%; background: var(--parent-soft-2); color: var(--parent-primary); font-size: 11px; font-weight: 800; }
+.parent-child-profiles__option[aria-pressed="true"] .parent-child-profiles__portrait { border-color: var(--parent-primary-bright); }
+.parent-child-profiles__name { max-width: 100%; overflow: hidden; color: var(--parent-muted); font-size: 10px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+
 .icon-button,
 .profile-button {
   display: inline-flex;
@@ -730,6 +744,13 @@
 @media (max-width: 390px) {
   .parent-main { padding-inline: 14px; }
   .parent-header { padding-inline: 14px; }
+  .parent-header__actions { gap: 4px; }
+  .parent-brand { min-width: 0; gap: 6px; }
+  .parent-brand__crest { width: 32px; height: 32px; }
+  .parent-brand__name { font-size: 13px; line-height: 14px; }
+  .parent-child-profiles__trigger { width: 43px; }
+  .icon-button { width: 36px; }
+  .profile-button { width: 36px; height: 36px; }
   .urgent-leave-card h3 { font-size: 16px; }
   .urgent-leave-card { padding: 14px; }
   .urgent-leave-card__body { gap: 10px; }
