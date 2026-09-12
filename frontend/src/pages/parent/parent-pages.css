@@ -89,38 +89,6 @@
   height: 42px;
 }
 
-.parent-brand__crest {
-  display: grid;
-  width: 37px;
-  height: 37px;
-  flex: 0 0 auto;
-  place-items: center;
-  border-radius: 11px;
-  color: #fff;
-  background: var(--parent-primary);
-  font-size: 11px;
-  font-weight: 800;
-}
-
-.parent-brand__name {
-  display: block;
-  min-width: 0;
-  color: var(--parent-primary-bright);
-  font-size: 16px;
-  line-height: 16px;
-  font-weight: 600;
-  letter-spacing: -0.03em;
-}
-
-.parent-brand__portal {
-  color: var(--parent-muted);
-  font-size: 11px;
-  line-height: 14px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
 .parent-header__actions { gap: 9px; }
 
 .parent-child-profiles { position: relative; flex: 0 0 auto; }
@@ -320,12 +288,15 @@
 .metric-card { min-height: 124px; padding: 14px; border: 1px solid rgba(226,232,240,.72); border-radius: 12px; background: white; box-shadow: 0 1px 2px rgba(15,23,42,.04), 0 1px 3px rgba(29,78,216,.02); }
 .metric-card__header { justify-content: space-between; color: var(--parent-muted); font-size: 11px; line-height: 14px; font-weight: 700; letter-spacing: 0.04em; }
 .metric-card__header svg { color: var(--parent-primary); }
+.metric-card__value-row { display: flex; align-items: baseline; gap: 8px; margin-top: 12px; min-width: 0; }
 .metric-card__value { display: block; margin-top: 12px; font-size: clamp(21px, 6.8vw, 28px); line-height: 1.1; letter-spacing: -0.045em; }
+.metric-card__value-row .metric-card__value { margin-top: 0; white-space: nowrap; }
 .metric-card__value.is-positive { color: var(--parent-positive-dark); font-size: clamp(17px, 5vw, 20px); letter-spacing: -0.025em; }
 .metric-card__detail { gap: 6px; margin-top: 7px; color: var(--parent-muted); font-size: 11px; line-height: 14px; flex-wrap: wrap; }
 .metric-card__insight { display: flex; flex-direction: column; align-items: flex-start; gap: 5px; margin-top: 8px; }
 .metric-card__rank { color: var(--parent-muted); font-size: 11px; line-height: 15px; font-weight: 600; }
 .metric-trend { display: inline-flex; align-items: center; gap: 3px; font-size: 11px; line-height: 15px; font-weight: 800; }
+.metric-trend--compact { flex: 0 0 auto; white-space: nowrap; }
 .metric-trend small { margin-left: 3px; color: var(--parent-muted); font-size: 10px; font-weight: 500; }
 .metric-trend--positive { color: var(--parent-positive-dark); }
 .metric-trend--negative { color: var(--parent-danger); }
@@ -753,8 +724,6 @@
   .parent-header { padding-inline: 14px; }
   .parent-header__actions { gap: 4px; }
   .parent-brand { min-width: 0; gap: 6px; }
-  .parent-brand__crest { width: 32px; height: 32px; }
-  .parent-brand__name { font-size: 13px; line-height: 14px; }
   .parent-child-profiles__trigger { width: 43px; }
   .icon-button { width: 36px; }
   .profile-button { width: 36px; height: 36px; }
@@ -763,6 +732,10 @@
   .urgent-leave-card__body { gap: 10px; }
   .time-label { font-size: 10px; }
   .metric-card { padding: 12px; }
+  .metric-card__value-row { gap: 5px; }
+  .metric-card__value-row .metric-card__value { font-size: clamp(18px, 5.5vw, 23px); }
+  .metric-trend--compact { font-size: 10px; }
+  .metric-trend--compact svg { width: 12px; height: 12px; }
   .parent-nav-item span { font-size: 11px; }
 }
 

@@ -2,7 +2,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Link, MemoryRouter } from "react-router-dom";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { App } from "./App";
+import { OperationsShell } from "./pages/operations/OperationsShell";
 import { schoolApiFixture } from "./test/schoolApiFixtures";
 
 const { apiFetchMock } = vi.hoisted(() => ({ apiFetchMock: vi.fn() }));
@@ -85,6 +87,24 @@ describe("implemented application routes", () => {
     expect(await screen.findByRole("heading", { name: "Class 7A Timetable" })).toBeVisible();
   });
 
+  it("uses the same school crest and name in parent, student, and teacher headers", async () => {
+    for (const [path, roles] of [
+      ["/parent/home", ["guardian"]],
+      ["/student", ["student"]],
+    ] as const) {
+      cleanup();
+      mockSession([...roles]);
+      const { container } = render(<MemoryRouter initialEntries={[path]}><App /></MemoryRouter>);
+      await waitFor(() => expect(container.querySelector(".school-brand__crest")).toHaveTextContent("CIS"));
+      expect(container.querySelector(".school-brand__name")).toHaveTextContent("Cambridge International School");
+    }
+    cleanup();
+    const { container } = render(<QueryClientProvider client={new QueryClient()}><MemoryRouter><OperationsShell portal="teacher" active="home" title="Today" subtitle="Your day"><span /></OperationsShell></MemoryRouter></QueryClientProvider>);
+    expect(container.querySelectorAll(".school-brand__crest")).toHaveLength(2);
+    container.querySelectorAll(".school-brand__crest").forEach((crest) => expect(crest).toHaveTextContent("CIS"));
+    container.querySelectorAll(".school-brand__name").forEach((name) => expect(name).toHaveTextContent("Cambridge International School"));
+  });
+
   it("opens Copilot from its visible navigation destination", async () => {
     render(<MemoryRouter initialEntries={["/student/copilot"]}><App /></MemoryRouter>);
     expect(await screen.findByRole("dialog", { name: "Attendance Copilot" })).toBeVisible();
@@ -111,12 +131,35 @@ describe("implemented application routes", () => {
   it("shows live attendance rank and trends alongside pending and historical homework", async () => {
     render(<MemoryRouter initialEntries={["/parent/home"]}><App /></MemoryRouter>);
     const attendance = within((await screen.findByText("Attendance", { selector: ".metric-card__header span" })).closest("article")!);
-    expect(attendance.getByText("+5%")).toBeVisible();
+    const risingTrend = attendance.getByText("+5%");
+    expect(risingTrend.closest(".metric-card__value-row")).toContainElement(attendance.getByText("95.0%"));
+    expect(risingTrend.querySelector("svg.lucide-trending-up")).toBeInTheDocument();
     expect(attendance.getByText("Class rank #4 of 32")).toBeVisible();
     const homework = within(screen.getByText("Homework", { selector: ".metric-card__header span" }).closest("article")!);
-    expect(homework.getByText("1 Pending")).toBeVisible();
+    expect(homework.getByText("1/12")).toBeVisible();
+    expect(homework.getByText("1 pending")).toBeVisible();
     expect(homework.getByText("12 assigned this term")).toBeVisible();
     expect(homework.getByText("-25%")).toBeVisible();
+  });
+
+  it("formats homework as pending over all assignments in the term", async () => {
+    const original = apiFetchMock.getMockImplementation() as (path: string) => Promise<unknown>;
+    apiFetchMock.mockImplementation((path: string) => {
+      if (path.startsWith("/api/v1/screens/parent/home/")) {
+        const response = schoolApiFixture(path) as { semester_metrics: Record<string, unknown> };
+        return Promise.resolve({ ...response, semester_metrics: {
+          ...response.semester_metrics,
+          homework_due: 6,
+          homework_total: 41,
+        } });
+      }
+      return original(path);
+    });
+    render(<MemoryRouter initialEntries={["/parent/home"]}><App /></MemoryRouter>);
+    const homework = within((await screen.findByText("Homework", { selector: ".metric-card__header span" })).closest("article")!);
+    expect(homework.getByText("6/41")).toBeVisible();
+    expect(homework.getByText("6 pending")).toBeVisible();
+    expect(homework.getByText("41 assigned this term")).toBeVisible();
   });
 
   it("handles declining attendance and new homework without inventing a rank or percentage baseline", async () => {
@@ -137,7 +180,10 @@ describe("implemented application routes", () => {
     });
     render(<MemoryRouter initialEntries={["/parent/home"]}><App /></MemoryRouter>);
     const attendance = within((await screen.findByText("Attendance", { selector: ".metric-card__header span" })).closest("article")!);
-    expect(attendance.getByText("-6%")).toBeVisible();
+    const fallingTrend = attendance.getByText("-6%");
+    expect(fallingTrend.closest(".metric-card__value-row")).toContainElement(attendance.getByText("95.0%"));
+    expect(fallingTrend.querySelector("svg.lucide-trending-down")).toBeInTheDocument();
+    expect(fallingTrend.querySelector("svg.lucide-trending-up")).not.toBeInTheDocument();
     expect(attendance.getByText("Class rank not published")).toBeVisible();
     const homework = within(screen.getByText("Homework", { selector: ".metric-card__header span" }).closest("article")!);
     expect(homework.getByText("+3 new")).toBeVisible();

@@ -6,13 +6,13 @@ import {
   Bot,
   CalendarDays,
   ClipboardCheck,
-  GraduationCap,
   Home,
   WalletCards,
 } from "lucide-react";
 import { AccountMenu } from "../../features/auth/AccountMenu";
 import { useOptionalAuth } from "../../features/auth/AuthContext";
 import { NotificationCenter } from "../../features/notifications/NotificationCenter";
+import { SchoolBrand } from "../../features/school/SchoolBrand";
 
 import "./student-pages.css";
 
@@ -78,7 +78,6 @@ export function StudentShell({
   children,
   activeNav,
   variant = "edura",
-  section = variant === "school" ? "Attendance" : "Classes",
   schoolName,
   routes,
   notificationCount,
@@ -95,15 +94,7 @@ export function StudentShell({
   return (
     <div className={`student-app student-app--${variant}`}>
       <header className={`student-topbar student-topbar--${variant}`}>
-        <div className="student-topbar__brand" aria-label={`${resolvedSchoolName ?? "Cambridge International School"} • ${section}`}>
-          <span className="student-brand-mark" aria-hidden="true">
-            <GraduationCap size={variant === "edura" ? 22 : 20} strokeWidth={2.1} />
-          </span>
-          <span className="student-brand-copy">
-            <strong>{resolvedSchoolName ?? "Cambridge International School"}</strong>
-          </span>
-          {resolvedSchoolName && <span className="student-verified-dot" title="Active school membership">✓</span>}
-        </div>
+        <SchoolBrand name={resolvedSchoolName ?? "Cambridge International School"} className="student-topbar__brand" />
 
         <div className="student-topbar__actions">
           <NotificationCenter

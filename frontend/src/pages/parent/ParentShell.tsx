@@ -13,6 +13,7 @@ import { AccountMenu } from "../../features/auth/AccountMenu";
 import { useOptionalAuth } from "../../features/auth/AuthContext";
 import { NotificationCenter } from "../../features/notifications/NotificationCenter";
 import { getAccessibleStudents } from "../../features/school/api";
+import { SchoolBrand } from "../../features/school/SchoolBrand";
 import { demoParentChild } from "./parentDemoData";
 import type { ParentChildSummary, ParentPageAction } from "./parentTypes";
 import "./parent-pages.css";
@@ -61,7 +62,6 @@ export function ParentShell({
 }: ParentShellProps) {
   const auth = useOptionalAuth();
   const schoolName = auth?.memberships.find((membership) => membership.role === "guardian")?.school_name ?? "Cambridge International School";
-  const schoolCrest = schoolName.split(/\s+/).filter(Boolean).map((word) => word[0]).join("").slice(0, 3).toUpperCase();
   const [searchParams] = useSearchParams();
   const selectedStudentId = searchParams.get("student_id");
   const [selectorOpen, setSelectorOpen] = useState(false);
@@ -111,10 +111,7 @@ export function ParentShell({
     <div className="parent-app">
       <header className="parent-header">
         <div className="parent-header__top">
-          <div className="parent-brand" aria-label={schoolName}>
-            <span className="parent-brand__crest" aria-hidden="true">{schoolCrest}</span>
-            <span className="parent-brand__name">{schoolName}</span>
-          </div>
+          <SchoolBrand name={schoolName} className="parent-brand" />
           <div className="parent-header__actions">
             <NotificationCenter buttonClassName="icon-button" iconSize={20} />
             {active === "home" && selectableChildren.length > 1 ? (

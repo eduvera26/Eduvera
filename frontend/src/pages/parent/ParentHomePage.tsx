@@ -40,6 +40,7 @@ function MetricCard({
   children,
   tone,
   insight,
+  valueAccessory,
 }: {
   label: string;
   icon: ReactNode;
@@ -47,6 +48,7 @@ function MetricCard({
   children: ReactNode;
   tone?: "positive";
   insight?: ReactNode;
+  valueAccessory?: ReactNode;
 }) {
   return (
     <article className="metric-card">
@@ -54,18 +56,21 @@ function MetricCard({
         <span>{label}</span>
         {icon}
       </div>
-      <strong className={tone === "positive" ? "metric-card__value is-positive" : "metric-card__value"}>{value}</strong>
+      <div className="metric-card__value-row">
+        <strong className={tone === "positive" ? "metric-card__value is-positive" : "metric-card__value"}>{value}</strong>
+        {valueAccessory}
+      </div>
       <div className="metric-card__detail">{children}</div>
       {insight ? <div className="metric-card__insight">{insight}</div> : null}
     </article>
   );
 }
 
-function MetricTrend({ value, label, higherIsBetter = true, suffix = "%" }: { value?: number | null; label: string; higherIsBetter?: boolean; suffix?: string }) {
-  if (value == null) return <span className="metric-trend metric-trend--neutral">Trend unavailable</span>;
+function MetricTrend({ value, label, higherIsBetter = true, suffix = "%", compact = false }: { value?: number | null; label: string; higherIsBetter?: boolean; suffix?: string; compact?: boolean }) {
+  if (value == null) return <span className="metric-trend metric-trend--neutral" aria-label="Trend unavailable">{compact ? "—" : "Trend unavailable"}</span>;
   const tone = value === 0 ? "neutral" : (value > 0) === higherIsBetter ? "positive" : "negative";
   const Icon = value > 0 ? TrendingUp : value < 0 ? TrendingDown : Minus;
-  return <span className={`metric-trend metric-trend--${tone}`}><Icon size={14} aria-hidden="true" />{value > 0 ? "+" : ""}{value}{suffix}<small>{label}</small></span>;
+  return <span className={`metric-trend metric-trend--${tone}${compact ? " metric-trend--compact" : ""}`} aria-label={`${value > 0 ? "Up " : value < 0 ? "Down " : "No change, "}${Math.abs(value)}${suffix} ${label}`}><Icon size={14} aria-hidden="true" />{value > 0 ? "+" : ""}{value}{suffix}{compact ? null : <small>{label}</small>}</span>;
 }
 
 export function ParentHomePage({
@@ -241,8 +246,9 @@ export function ParentHomePage({
             <span className="section-link-label">{data.metrics.termLabel}</span>
           </div>
           <div className="metric-grid">
-            <MetricCard label="Attendance" icon={<PieChart size={19} />} value={data.metrics.attendance} insight={<>
-              <MetricTrend value={data.metrics.attendanceTrend} label="vs prior recorded days" />
+            <MetricCard label="Attendance" icon={<PieChart size={19} />} value={data.metrics.attendance}
+              valueAccessory={<MetricTrend value={data.metrics.attendanceTrend} label="vs prior recorded days" compact />} insight={<>
+              <span className="metric-card__rank">{data.metrics.attendanceTrend == null ? "Not enough attendance history" : "vs prior recorded days"}</span>
               <span className="metric-card__rank">{data.metrics.attendanceRank ? `Class rank #${data.metrics.attendanceRank}${data.metrics.attendanceCohortSize ? ` of ${data.metrics.attendanceCohortSize}` : ""}` : "Class rank not published"}</span>
             </>}>
               <span className="mini-pill mini-pill--success">{data.metrics.attendanceStatus}</span><span>{data.metrics.threshold}</span>
@@ -250,11 +256,11 @@ export function ParentHomePage({
             <MetricCard label="Schedule" icon={<CalendarDays size={19} />} value={`${data.metrics.periodsToday} Periods`}>
               <span>Dismissal:</span><strong className="blue-text">{data.metrics.dismissal}</strong>
             </MetricCard>
-            <MetricCard label="Homework" icon={<ClipboardList size={19} />} value={`${data.metrics.homeworkTasks} Pending`} insight={<>
+            <MetricCard label="Homework" icon={<ClipboardList size={19} />} value={data.metrics.homeworkTotal === undefined ? `${data.metrics.homeworkTasks} Pending` : `${data.metrics.homeworkTasks}/${data.metrics.homeworkTotal}`} insight={<>
               <span className="metric-card__rank">{data.metrics.homeworkTotal === undefined ? "Term history unavailable" : `${data.metrics.homeworkTotal} assigned this term`}</span>
               <MetricTrend value={homeworkTrend} suffix={homeworkPrevious === 0 && (homeworkRecent ?? 0) > 0 ? " new" : "%"} label="last 30d vs prior 30d" higherIsBetter={false} />
             </>}>
-              <span className="blue-dot" /><span>{data.metrics.homeworkTasks} currently due</span>
+              <span className="blue-dot" /><span>{data.metrics.homeworkTasks} pending</span>
             </MetricCard>
             <MetricCard label="Dues Status" icon={<CheckCircle2 size={19} />} value={data.metrics.duesStatus} tone="positive">
               <span>{data.metrics.duesDetail}</span>

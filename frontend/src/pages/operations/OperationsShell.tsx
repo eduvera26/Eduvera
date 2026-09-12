@@ -1,11 +1,13 @@
 import type { ReactNode } from "react";
 import { NavLink } from "react-router-dom";
-import { BarChart3, CalendarDays, ClipboardCheck, GraduationCap, Home, LayoutDashboard } from "lucide-react";
+import { BarChart3, CalendarDays, ClipboardCheck, Home, LayoutDashboard } from "lucide-react";
 import { AccountMenu } from "../../features/auth/AccountMenu";
 import { useOptionalAuth } from "../../features/auth/AuthContext";
 import { NotificationCenter } from "../../features/notifications/NotificationCenter";
+import { SchoolBrand } from "../../features/school/SchoolBrand";
 import "./operations.css";
 import "./operations-links.css";
+import "./operations-brand.css";
 
 type Portal = "teacher" | "principal";
 type Active = "home" | "attendance" | "timetable";
@@ -29,7 +31,7 @@ export function OperationsShell({ portal, active, title, subtitle, children }: {
   return (
     <div className={`operations-app operations-app--${portal}`}>
       <aside className="operations-sidebar">
-        <div className="operations-brand"><span><GraduationCap size={23} /></span><div><strong>{schoolName}</strong></div></div>
+        <SchoolBrand name={schoolName} className="operations-brand" />
         <nav aria-label={`${portal} portal navigation`}>
           {nav[portal].map(({ id, label, path, icon: Icon }) => (
             <NavLink key={id} to={path} end={id === "home"} className={active === id ? "is-active" : ""}><Icon size={19} /><span>{label}</span></NavLink>
@@ -39,6 +41,7 @@ export function OperationsShell({ portal, active, title, subtitle, children }: {
       </aside>
       <div className="operations-workspace">
         <header className="operations-topbar">
+          <SchoolBrand name={schoolName} className="operations-topbar__brand" />
           <div><span>{subtitle}</span><h1>{title}</h1></div>
           <div><NotificationCenter buttonClassName="operations-icon-button" iconSize={20} /><AccountMenu buttonClassName="operations-profile-button" ariaLabel={`Open ${portal} profile`} iconSize={20} /></div>
         </header>

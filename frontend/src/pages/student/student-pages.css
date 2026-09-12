@@ -117,57 +117,6 @@
 .student-topbar__brand {
   min-width: 0;
   flex: 1;
-  gap: 8px;
-}
-
-.student-brand-mark {
-  display: grid;
-  width: 34px;
-  height: 34px;
-  flex: 0 0 auto;
-  place-items: center;
-  border-radius: 11px;
-  color: var(--student-teal);
-  background: var(--student-teal-pale);
-  box-shadow: 0 1px 3px rgba(0, 104, 95, 0.13);
-}
-
-.student-brand-copy {
-  display: flex;
-  min-width: 0;
-  flex-direction: column;
-  line-height: 1.15;
-}
-
-.student-brand-copy strong {
-  overflow: hidden;
-  max-width: 235px;
-  font-size: 12px;
-  font-weight: 600;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-
-.student-brand-copy small {
-  color: var(--student-ink-soft);
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-.student-verified-dot {
-  display: grid;
-  width: 14px;
-  height: 14px;
-  margin-left: -5px;
-  flex: 0 0 auto;
-  place-items: center;
-  border: 1.5px solid var(--student-primary-bright);
-  border-radius: 50%;
-  color: var(--student-primary-bright);
-  font-size: 9px;
-  font-weight: 800;
 }
 
 .student-topbar__actions {
@@ -3115,7 +3064,6 @@
   .horizontal-pills,
   .day-selector__scroll { width: calc(100% + 26px); margin-inline: -13px; padding-inline: 13px; }
   .timetable-week-chart { margin-right: -13px; }
-  .student-brand-copy strong { max-width: 150px; }
   .student-class-chip { display: none; }
   .attendance-hero,
   .eligibility-hero { padding: 16px; }
